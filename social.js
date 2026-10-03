@@ -33,7 +33,10 @@
       user = nextUser;
       accountName.textContent = user?.email || "";
       accountButton.textContent = user ? "ログアウト" : "ログイン";
+      document.getElementById("profile-button").hidden = !user;
+      document.getElementById("notices-button").hidden = !user;
       render();
+      window.dispatchEvent(new CustomEvent("bonbon:authchange", { detail: { user } }));
     }
 
     accountButton.addEventListener("click", async () => {
@@ -74,16 +77,17 @@
     window.bonbonCardActions = (paper, foot) => {
       const actions = el("div", "social-actions");
       const own = user?.id === paper.user_id;
-      const button = el("button", `social-action${own ? " dangerbutton" : ""}`, own ? "削除" : "通報");
+      const mayDelete = own || window.bonbonIsModerator?.();
+      const button = el("button", `social-action${mayDelete ? " dangerbutton" : ""}`, mayDelete ? "削除" : "通報");
       button.type = "button";
-      button.addEventListener("click", () => own ? deletePaper(paper) : reportPaper(paper));
+      button.addEventListener("click", () => mayDelete ? deletePaper(paper) : reportPaper(paper));
       actions.append(button);
       foot.append(actions);
     };
 
     async function loadPapers() {
       const { data, error } = await client.from("papers")
-        .select("id,user_id,author,category,title,blocks,created_at")
+        .select("id,user_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at")
         .order("created_at", { ascending: false }).limit(50);
       if (error) {
         notice.textContent = "公開投稿を読み込めませんでした。設定または通信状態を確認してください。";
@@ -111,10 +115,12 @@
       publishButton.disabled = true;
       publishButton.textContent = "公開しています…";
       const uploaded = [];
+      let stage = "投稿";
       try {
         const blocks = [];
         for (const block of paper.blocks) {
           if (block.type !== "image") { blocks.push(block); continue; }
+          stage = "画像";
           const imagePath = `${user.id}/${crypto.randomUUID()}.jpg`;
           const blob = await (await fetch(block.src)).blob();
           const { error } = await client.storage.from("paper-images")
@@ -123,9 +129,11 @@
           uploaded.push(imagePath);
           blocks.push({ type: "image", path: imagePath, caption: block.caption || "" });
         }
+        stage = "投稿";
         const { error } = await client.from("papers").insert({
           user_id: user.id, author: paper.author, category: paper.category,
-          title: paper.title, blocks
+          title: paper.title, blocks, tags: paper.tags,
+          source_paper_id: paper.source_paper_id, source_kind: paper.source_kind
         });
         if (error) throw error;
         if (draftBeingEditedId) {
@@ -141,7 +149,7 @@
         showToast("論文を公開しました");
       } catch (error) {
         if (uploaded.length) await client.storage.from("paper-images").remove(uploaded);
-        showToast("公開できませんでした。内容を残したまま、もう一度お試しください");
+        showToast(`${stage}の保存に失敗しました。内容は残っています。もう一度お試しください`);
         console.error("Publish failed", error);
       } finally {
         publishButton.disabled = false;
@@ -150,12 +158,12 @@
     });
 
     async function deletePaper(paper) {
-      if (!user || paper.user_id !== user.id) return;
+      if (!user || paper.user_id !== user.id && !window.bonbonIsModerator?.()) return;
       if (!confirm("この公開投稿を削除しますか？")) return;
-      const { error } = await client.from("papers").delete().eq("id", paper.id).eq("user_id", user.id);
+      const { error } = await client.from("papers").delete().eq("id", paper.id);
       if (error) { showToast("削除できませんでした"); return; }
       const paths = (paper.blocks || []).filter(b => b.type === "image" && b.path).map(b => b.path);
-      if (paths.length) await client.storage.from("paper-images").remove(paths);
+      if (paths.length && paper.user_id === user.id) await client.storage.from("paper-images").remove(paths);
       await loadPapers();
       showToast("公開投稿を削除しました");
     }
@@ -171,6 +179,10 @@
       showToast(error ? "通報を送れませんでした。送信済みの場合があります" : "通報を受け付けました");
     }
 
+    window.bonbonClient = client;
+    window.bonbonCurrentUser = () => user;
+    window.bonbonReloadPapers = loadPapers;
+    window.dispatchEvent(new CustomEvent("bonbon:ready", { detail: { client } }));
     loadPapers();
   }
 })();

@@ -1,0 +1,62 @@
+"""Build an idempotent SQL seed for the 10 clearly labelled sample authors."""
+
+import json
+import uuid
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+AUTHORS = json.loads((ROOT / "supabase/demo-content.json").read_text())
+NAMESPACE = uuid.UUID("3f97b607-b8e3-4b3d-9932-145338211bbb")
+
+
+def sql(value):
+    if isinstance(value, uuid.UUID):
+        return f"'{value}'"
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    raise TypeError(value)
+
+
+def main():
+    assert len(AUTHORS) == 10
+    assert all(len(author["posts"]) == 10 for author in AUTHORS)
+    author_rows = []
+    paper_rows = []
+    for author in AUTHORS:
+        aid = uuid.uuid5(NAMESPACE, "author:" + author["handle"])
+        author_rows.append("(" + ",".join(map(sql, [aid, author["handle"], author["name"], author["bio"]])) + ")")
+    for post_number in range(10):
+        for author_number, author in enumerate(AUTHORS):
+            item = author["posts"][post_number]
+            title, body, category, tags = item[:4]
+            image = item[4] if len(item) > 4 else None
+            assert 1 <= len(title) <= 70 and 1 <= len(body) <= 500
+            assert category in {"暮らし", "食べもの", "人間関係"}
+            assert len(tags) <= 5 and all(1 <= len(t) <= 20 for t in tags)
+            aid = uuid.uuid5(NAMESPACE, "author:" + author["handle"])
+            pid = uuid.uuid5(NAMESPACE, "paper:" + author["handle"] + ":" + str(post_number))
+            blocks = [{"type": "text", "heading": "観察メモ", "body": body}]
+            if image:
+                assert image in {"sock-detective.jpg", "checkout-lines.jpg", "reply-at-night.jpg", "umbrella-choices.jpg"}
+                blocks.append({"type": "image", "asset": "images/" + image, "caption": "この投稿のために生成した挿絵"})
+            offset = (99 - (post_number * 10 + author_number)) * 3
+            fields = [sql(pid), sql(aid), sql(author["name"]), sql(category), sql(title),
+                      sql(json.dumps(blocks, ensure_ascii=False, separators=(",", ":"))) + "::jsonb",
+                      "ARRAY[" + ",".join(map(sql, tags)) + "]::text[]",
+                      f"now() - interval '{offset} hours'"]
+            paper_rows.append("(" + ",".join(fields) + ")")
+    output = [
+        "-- 公式サンプルのみ。実ログイン用のユーザーは作りません。",
+        "-- demo-support.sql の後に実行。再実行しても同じ100件を重複作成しません。",
+        "insert into public.sample_authors(id,handle,display_name,bio) values",
+        ",\n".join(author_rows) + " on conflict(id) do nothing;",
+        "insert into public.papers(id,sample_author_id,author,category,title,blocks,tags,created_at) values",
+    ]
+    output.append(",\n".join(paper_rows) + " on conflict(id) do nothing;")
+    (ROOT / "supabase/demo-seed.sql").write_text("\n".join(output) + "\n")
+    print("Wrote 10 sample authors and 100 posts")
+
+
+if __name__ == "__main__":
+    main()

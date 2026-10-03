@@ -87,15 +87,16 @@
 
     async function loadPapers() {
       const { data, error } = await client.from("papers")
-        .select("id,user_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at")
-        .order("created_at", { ascending: false }).limit(50);
+        .select("id,user_id,sample_author_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at")
+        .order("created_at", { ascending: false }).limit(200);
       if (error) {
         notice.textContent = "公開投稿を読み込めませんでした。設定または通信状態を確認してください。";
         publicPapers = [];
         render();
         return;
       }
-      publicPapers = (data || []).map(p => ({ ...p, remote: true }));
+      publicPapers = (data || []).map(p => ({ ...p, user_id: p.user_id || p.sample_author_id,
+        sample: !!p.sample_author_id, remote: true }));
       render();
     }
 

@@ -59,7 +59,7 @@
     const storageKey="ronbun-modoki-drafts-v1";
     let drafts=[];
     try { const saved=JSON.parse(localStorage.getItem(storageKey)||"[]"); if(Array.isArray(saved)) drafts=saved.filter(p=>p&&typeof p.title==="string"); } catch {}
-    let filter="すべて", publicPapers=[], liveMode=false;
+    let filter="すべて", publicPapers=[], liveMode=false, draftBeingEditedId=null;
     const grid=document.getElementById("papers-grid");
     const count=document.getElementById("paper-count");
     const writeDialog=document.getElementById("write-dialog");
@@ -88,7 +88,12 @@
         const card=el("article","paper"),head=el("div","paperhead"),tag=el("span","tag",p.category||"暮らし");
         const status=el("span","",p.local?"自分の下書き":p.remote?"公開投稿":"サンプル作品"),title=el("h3","",p.title),summary=el("p","",summaryFor(p));
         const foot=el("div","paperfoot"),author=el("span","",`著者：${p.author||"匿名研究者"}`),btn=el("button","","論文を読む");
-        btn.type="button";btn.addEventListener("click",()=>openPaper(p));head.append(tag,status);foot.append(author,btn);card.append(head,title,summary,foot);if(p.remote&&window.bonbonCardActions)window.bonbonCardActions(p,foot);grid.append(card);
+        btn.type="button";btn.addEventListener("click",()=>openPaper(p));head.append(tag,status);foot.append(author,btn);card.append(head,title,summary,foot);
+        if(p.local){
+          const actions=el("div","social-actions"),edit=el("button","social-action","編集"),remove=el("button","social-action dangerbutton","削除");
+          edit.type=remove.type="button";edit.addEventListener("click",()=>editDraft(p));remove.addEventListener("click",()=>deleteDraft(p));actions.append(edit,remove);foot.append(actions);
+        }
+        if(p.remote&&window.bonbonCardActions)window.bonbonCardActions(p,foot);grid.append(card);
       }
     }
     function openPaper(p){
@@ -156,7 +161,37 @@
       } finally { URL.revokeObjectURL(url) }
     }
     document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListener("click",()=>{filter=button.dataset.filter;document.querySelectorAll("[data-filter]").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));render()}));
-    for(const id of ["header-create","hero-create"])document.getElementById(id).addEventListener("click",()=>writeDialog.showModal());
+    function resetComposer(){form.reset();editorBlocks.replaceChildren();addTextBlock();draftBeingEditedId=null}
+    function editDraft(p){
+      resetComposer();draftBeingEditedId=p.id;
+      form.elements.author.value=p.author||"";form.elements.category.value=p.category||"暮らし";form.elements.title.value=p.title;
+      editorBlocks.replaceChildren();
+      for(const item of blocksFor(p)){
+        if(item.type==="text"){
+          const block=addTextBlock(item.heading||"");const area=block.querySelector("textarea");area.value=item.body||"";area.dispatchEvent(new Event("input"));
+        } else if(item.type==="image"&&item.src){
+          const block=addImageBlock();if(!block)continue;
+          block.dataset.src=item.src;block.querySelector('input[type="text"]').value=item.caption||"";
+          const preview=block.querySelector("img");preview.src=item.src;preview.hidden=false;
+        }
+      }
+      if(!editorBlocks.children.length)addTextBlock();
+      writeDialog.showModal();
+    }
+    function deleteDraft(p){
+      if(!confirm("この下書きを削除しますか？"))return;
+      const next=drafts.filter(d=>d.id!==p.id);
+      try{localStorage.setItem(storageKey,JSON.stringify(next));drafts=next;render();showToast("下書きを削除しました")}
+      catch{showToast("下書きを削除できませんでした")}
+    }
+    function saveDraft(paper){
+      const p={id:draftBeingEditedId||`draft-${Date.now()}`,local:true,...paper};
+      const index=drafts.findIndex(d=>d.id===p.id),next=drafts.slice();
+      if(index>=0)next[index]=p;else next.push(p);
+      try{localStorage.setItem(storageKey,JSON.stringify(next));drafts=next;return true}
+      catch{showToast("保存容量が足りません。画像を減らしてお試しください");return false}
+    }
+    for(const id of ["header-create","hero-create"])document.getElementById(id).addEventListener("click",()=>{resetComposer();writeDialog.showModal()});
     document.querySelectorAll("[data-close]").forEach(button=>button.addEventListener("click",()=>document.getElementById(button.dataset.close).close()));
     document.getElementById("add-text").addEventListener("click",()=>addTextBlock());
     document.getElementById("add-image").addEventListener("click",()=>addImageBlock());
@@ -176,12 +211,10 @@
       }
       return {author:String(data.get("author")||"").trim()||"匿名研究者",category:String(data.get("category")||"暮らし"),title,blocks};
     }
-    function clearComposer(){form.reset();editorBlocks.replaceChildren();addTextBlock();writeDialog.close()}
+    function clearComposer(){resetComposer();writeDialog.close()}
     form.addEventListener("submit",event=>{
       event.preventDefault();const paper=collectPaper();if(!paper)return;
-      const p={id:`draft-${Date.now()}`,local:true,...paper};
-      drafts.push(p);
-      try{localStorage.setItem(storageKey,JSON.stringify(drafts))}catch{drafts.pop();showToast("保存容量が足りません。画像を減らしてお試しください");return}
+      if(!saveDraft(paper))return;
       clearComposer();filter="自分の下書き";
       document.querySelectorAll("[data-filter]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.filter===filter)));
       render();document.getElementById("papers").scrollIntoView({behavior:"smooth"});showToast("下書きをこの端末に保存しました");

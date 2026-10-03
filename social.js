@@ -106,6 +106,7 @@
         if (!saveDraft(paper)) return;
         clearComposer();
         filter = "自分の下書き";
+        window.bonbonSelectFeed?.("new");
         document.querySelectorAll("[data-filter]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
         render();
         accountDialog.showModal();

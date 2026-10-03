@@ -7,6 +7,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AUTHORS = json.loads((ROOT / "supabase/demo-content.json").read_text())
+EXPANSIONS = {}
+current_author = None
+for line in (ROOT / "supabase/demo-expansions.txt").read_text().splitlines():
+    if line.startswith("#"):
+        current_author = line[1:]
+        assert current_author not in EXPANSIONS
+        EXPANSIONS[current_author] = []
+    else:
+        plan, discussion = line.split("|", 1)
+        EXPANSIONS[current_author].append((plan, discussion))
 NAMESPACE = uuid.UUID("3f97b607-b8e3-4b3d-9932-145338211bbb")
 
 
@@ -21,6 +31,8 @@ def sql(value):
 def main():
     assert len(AUTHORS) == 10
     assert all(len(author["posts"]) == 10 for author in AUTHORS)
+    assert set(EXPANSIONS) == {author["handle"] for author in AUTHORS}
+    assert all(len(items) == 10 for items in EXPANSIONS.values())
     author_rows = []
     paper_rows = []
     for author in AUTHORS:
@@ -36,7 +48,13 @@ def main():
             assert len(tags) <= 5 and all(1 <= len(t) <= 20 for t in tags)
             aid = uuid.uuid5(NAMESPACE, "author:" + author["handle"])
             pid = uuid.uuid5(NAMESPACE, "paper:" + author["handle"] + ":" + str(post_number))
-            blocks = [{"type": "text", "heading": "観察メモ", "body": body}]
+            plan, discussion = EXPANSIONS[author["handle"]][post_number]
+            blocks = [
+                {"type": "text", "heading": "問いと仮説", "body": body},
+                {"type": "text", "heading": "検証計画（未実施）", "body": plan},
+                {"type": "text", "heading": "考察と反例", "body": discussion},
+            ]
+            assert all(len(block["body"]) <= 500 for block in blocks)
             if image:
                 assert image in {"sock-detective.jpg", "checkout-lines.jpg", "reply-at-night.jpg", "umbrella-choices.jpg"}
                 blocks.append({"type": "image", "asset": "images/" + image, "caption": "この投稿のために生成した挿絵"})
@@ -48,12 +66,15 @@ def main():
             paper_rows.append("(" + ",".join(fields) + ")")
     output = [
         "-- 公式サンプルのみ。実ログイン用のユーザーは作りません。",
-        "-- demo-support.sql の後に実行。再実行しても同じ100件を重複作成しません。",
+        "-- demo-support.sql の後に実行。再実行すると同じ100件の本文を更新します。",
         "insert into public.sample_authors(id,handle,display_name,bio) values",
         ",\n".join(author_rows) + " on conflict(id) do nothing;",
         "insert into public.papers(id,sample_author_id,author,category,title,blocks,tags,created_at) values",
     ]
-    output.append(",\n".join(paper_rows) + " on conflict(id) do nothing;")
+    output.append(",\n".join(paper_rows) + " on conflict(id) do update set "
+                  "author=excluded.author, category=excluded.category, title=excluded.title, "
+                  "blocks=excluded.blocks, tags=excluded.tags "
+                  "where public.papers.sample_author_id=excluded.sample_author_id;")
     (ROOT / "supabase/demo-seed.sql").write_text("\n".join(output) + "\n")
     print("Wrote 10 sample authors and 100 posts")
 

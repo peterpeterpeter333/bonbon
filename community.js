@@ -40,6 +40,20 @@
       reposts.some(item => item.paper_id === paper.id && following.has(item.user_id));
     return true;
   };
+  window.bonbonSortPapers = papers => {
+    if (feed !== "recommended") return papers;
+    const liked = papers.filter(p => myLikes.has(p.id) || myBookmarks.has(p.id));
+    const interests = new Set(liked.flatMap(p => [p.category, ...(p.tags || [])]));
+    const score = p => {
+      const ageHours = Math.max(0, (Date.now() - Date.parse(p.feedCreatedAt || p.created_at)) / 3600000);
+      const interest = [p.category, ...(p.tags || [])].filter(value => interests.has(value)).length;
+      return interest * 4 + (following.has(p.user_id) ? 5 : 0) +
+        Math.min(numberFor(likeCounts, p.id), 20) * 0.6 +
+        Math.min(numberFor(commentCounts, p.id), 20) * 0.8 +
+        Math.min(numberFor(repostCounts, p.id), 20) * 0.5 + 5 / (1 + ageHours / 24);
+    };
+    return papers.slice().sort((a, b) => score(b) - score(a));
+  };
   window.bonbonRepostFeed = () => reposts.filter(item => item.paper).map(item => ({
     ...item.paper, remote: true, repostActor: item.user_id,
     repostBy: authorName(item.user_id), repostQuote: item.quote,
@@ -48,7 +62,7 @@
 
   search.addEventListener("input", () => window.bonbonRender?.());
   document.querySelectorAll("[data-feed]").forEach(control => control.addEventListener("click", () => {
-    if (control.dataset.feed !== "new" && needsLogin()) return;
+    if (["following", "bookmarks"].includes(control.dataset.feed) && needsLogin()) return;
     feed = control.dataset.feed;
     document.querySelectorAll("[data-feed]").forEach(item => item.setAttribute("aria-pressed", String(item === control)));
     window.bonbonRender?.();

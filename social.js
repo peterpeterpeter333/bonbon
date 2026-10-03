@@ -98,7 +98,16 @@
     publishButton.addEventListener("click", async () => {
       const paper = collectPaper();
       if (!paper) return;
-      if (!user) { accountDialog.showModal(); showToast("公開するにはログインしてください"); return; }
+      if (!user) {
+        if (!saveDraft(paper)) return;
+        clearComposer();
+        filter = "自分の下書き";
+        document.querySelectorAll("[data-filter]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
+        render();
+        accountDialog.showModal();
+        showToast("下書きに保存しました。ログイン後に編集して公開できます");
+        return;
+      }
       publishButton.disabled = true;
       publishButton.textContent = "公開しています…";
       const uploaded = [];
@@ -119,6 +128,11 @@
           title: paper.title, blocks
         });
         if (error) throw error;
+        if (draftBeingEditedId) {
+          const next = drafts.filter(d => d.id !== draftBeingEditedId);
+          try { localStorage.setItem(storageKey, JSON.stringify(next)); drafts = next; }
+          catch { /* 公開は完了しているため、下書きは端末に残す */ }
+        }
         clearComposer();
         filter = "すべて";
         document.querySelectorAll("[data-filter]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));

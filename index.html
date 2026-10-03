@@ -30,7 +30,7 @@
       <aside class="aside" id="about"><span class="small">HOW IT WORKS / 01</span><div><h2>ちょっと大げさに、<br>ちゃんと面白く。</h2><p>気になることを選び、仮説を立てて、観察した結果を書く。正解よりも、あなたならではの視点を歓迎します。</p></div><div class="stamp">好奇心<br>歓迎</div></aside>
     </div>
     <p class="notice" id="site-notice">これは操作を試すためのデモです。作成した論文はこの端末のブラウザ内に保存され、ほかの人には公開されません。</p>
-    <section id="papers" aria-labelledby="papers-title"><div class="sectionhead"><div><h2 id="papers-title">みんなの論文</h2><p>日常を少し違う角度から眺めた、研究の記録。</p></div><span class="count" id="paper-count"></span></div><div class="controls" role="group" aria-label="論文のカテゴリー"><button class="chip" data-filter="すべて" aria-pressed="true">すべて</button><button class="chip" data-filter="暮らし" aria-pressed="false">暮らし</button><button class="chip" data-filter="食べもの" aria-pressed="false">食べもの</button><button class="chip" data-filter="人間関係" aria-pressed="false">人間関係</button><button class="chip" data-filter="自分の下書き" aria-pressed="false">自分の下書き</button></div><div class="community-tools"><input id="paper-search" type="search" aria-label="論文を検索" placeholder="タイトル・タグ・著者で検索"><div class="feed-modes" role="group" aria-label="表示する論文"><button type="button" data-feed="new" aria-pressed="true">新着</button><button type="button" data-feed="following" aria-pressed="false">フォロー中</button><button type="button" data-feed="bookmarks" aria-pressed="false">保存済み</button></div></div><div class="grid" id="papers-grid"></div></section>
+    <section id="papers" aria-labelledby="papers-title"><div class="sectionhead"><div><h2 id="papers-title">みんなの論文</h2><p>日常を少し違う角度から眺めた、研究の記録。</p></div><span class="count" id="paper-count"></span></div><div class="controls" role="group" aria-label="論文のカテゴリー"><button class="chip" data-filter="すべて" aria-pressed="true">すべて</button><button class="chip" data-filter="暮らし" aria-pressed="false">暮らし</button><button class="chip" data-filter="食べもの" aria-pressed="false">食べもの</button><button class="chip" data-filter="人間関係" aria-pressed="false">人間関係</button><button class="chip" data-filter="自分の下書き" aria-pressed="false">自分の下書き</button></div><div class="community-tools"><input id="paper-search" type="search" aria-label="論文を検索" placeholder="タイトル・タグ・著者で検索"><div class="feed-modes" role="group" aria-label="表示する論文"><button type="button" data-feed="new" aria-pressed="true">新着</button><button type="button" data-feed="recommended" aria-pressed="false">おすすめ</button><button type="button" data-feed="following" aria-pressed="false">フォロー中</button><button type="button" data-feed="bookmarks" aria-pressed="false">保存済み</button></div></div><div class="grid" id="papers-grid"></div></section>
   </main>
   <footer class="footer"><span>© 論文もどき · プロトタイプ</span><span>ここにあるサンプル作品は架空の内容です。</span></footer>
   <dialog id="write-dialog" aria-labelledby="write-title"><div class="dialogin">
@@ -80,7 +80,7 @@
       if(!liveMode)return [...drafts.slice().reverse(),...samples];
       const feedItems=[...publicPapers,...(window.bonbonRepostFeed?.()||[])];
       feedItems.sort((a,b)=>Date.parse(b.feedCreatedAt||b.created_at)-Date.parse(a.feedCreatedAt||a.created_at));
-      return [...drafts.slice().reverse(),...feedItems];
+      return [...drafts.slice().reverse(),...(window.bonbonSortPapers?.(feedItems)||feedItems)];
     }
     function blocksFor(p){
       if(Array.isArray(p.blocks)) return p.blocks.filter(b=>b&&["text","image"].includes(b.type));

@@ -253,7 +253,7 @@
     form.addEventListener("submit",event=>{
       event.preventDefault();const paper=collectPaper();if(!paper)return;
       if(!saveDraft(paper))return;
-      clearComposer();filter="自分の下書き";
+      clearComposer();filter="自分の下書き";window.bonbonSelectFeed?.("new");
       document.querySelectorAll("[data-filter]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.filter===filter)));
       render();document.getElementById("papers").scrollIntoView({behavior:"smooth"});showToast("下書きをこの端末に保存しました");
     });
@@ -267,7 +267,7 @@
     };
     render();
   </script>
-  <script src="social.js?v=20261003-3"></script>
-  <script src="community.js?v=20261003-2"></script>
+  <script src="social.js?v=20261003-4"></script>
+  <script src="community.js?v=20261003-3"></script>
 </body>
 </html>

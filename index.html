@@ -46,7 +46,7 @@
   <dialog id="read-dialog" aria-labelledby="read-title"><div class="dialogin"><div class="dialogtop"><span class="eyebrow">論文もどき</span><button class="iconbutton" data-close="read-dialog" aria-label="閉じる">×</button></div><div id="read-content"></div></div></dialog>
   <dialog id="account-dialog" aria-labelledby="account-title"><div class="dialogin"><div class="dialogtop"><div><span class="eyebrow">ACCOUNT</span><h2 id="account-title">メールでログイン</h2></div><button class="iconbutton" data-close="account-dialog" aria-label="閉じる">×</button></div><p class="hint">メールに届くリンクを押すとログインできます。閲覧だけなら登録は不要です。</p><form id="account-form"><div class="field"><label for="account-email">メールアドレス</label><input id="account-email" type="email" autocomplete="email" required placeholder="you@example.com"></div><div class="formactions"><p id="account-help">メールアドレスは公開されません。</p><button class="primary" type="submit">ログインリンクを送る</button></div></form></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js"></script>
+  <script src="config.js?v=20261003-1"></script>
   <script>
     const samples=[
       {id:"sample-1",category:"暮らし",title:"洗濯後に靴下が片方だけ消える現象について",author:"片方捜索班",hypothesis:"靴下は洗濯物を畳む前に別の場所へ移動している。",method:"一週間、洗濯機から取り出した靴下の数と、畳む直前の数を記録した。",result:"消えたと思った3枚のうち2枚は別の服の袖に入り、1枚は洗濯かごに残っていた。",conclusion:"靴下は消えない。人が十分に観察していないだけである。"},
@@ -221,6 +221,6 @@
     });
     render();
   </script>
-  <script src="social.js"></script>
+  <script src="social.js?v=20261003-1"></script>
 </body>
 </html>

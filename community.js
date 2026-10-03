@@ -61,11 +61,14 @@
   }));
 
   search.addEventListener("input", () => window.bonbonRender?.());
+  window.bonbonSelectFeed = mode => {
+    feed = mode;
+    document.querySelectorAll("[data-feed]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.feed === mode)));
+    window.bonbonRender?.();
+  };
   document.querySelectorAll("[data-feed]").forEach(control => control.addEventListener("click", () => {
     if (["following", "bookmarks"].includes(control.dataset.feed) && needsLogin()) return;
-    feed = control.dataset.feed;
-    document.querySelectorAll("[data-feed]").forEach(item => item.setAttribute("aria-pressed", String(item === control)));
-    window.bonbonRender?.();
+    window.bonbonSelectFeed(control.dataset.feed);
   }));
 
   async function refreshCommunity() {

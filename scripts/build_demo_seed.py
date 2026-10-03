@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 AUTHORS = json.loads((ROOT / "supabase/demo-content.json").read_text())
 EXPANSIONS = {}
+FEATURED = json.loads((ROOT / "supabase/demo-featured.json").read_text())
 current_author = None
 for line in (ROOT / "supabase/demo-expansions.txt").read_text().splitlines():
     if line.startswith("#"):
@@ -32,6 +33,7 @@ def main():
     assert len(AUTHORS) == 10
     assert all(len(author["posts"]) == 10 for author in AUTHORS)
     assert set(EXPANSIONS) == {author["handle"] for author in AUTHORS}
+    assert set(FEATURED) == set(EXPANSIONS)
     assert all(len(items) == 10 for items in EXPANSIONS.values())
     author_rows = []
     paper_rows = []
@@ -52,13 +54,17 @@ def main():
             blocks = [
                 {"type": "text", "heading": "問いと仮説", "body": body},
                 {"type": "text", "heading": "検証計画（未実施）", "body": plan},
-                {"type": "text", "heading": "考察と反例", "body": discussion},
             ]
+            if post_number == 0:
+                blocks.append({"type": "text", "heading": "反証条件", "body": FEATURED[author["handle"]][0]})
+            blocks.append({"type": "text", "heading": "考察と反例", "body": discussion})
+            if post_number == 0:
+                blocks.append({"type": "text", "heading": "仮結論", "body": FEATURED[author["handle"]][1]})
             assert all(len(block["body"]) <= 500 for block in blocks)
             if image:
                 assert image in {"sock-detective.jpg", "checkout-lines.jpg", "reply-at-night.jpg", "umbrella-choices.jpg"}
                 blocks.append({"type": "image", "asset": "images/" + image, "caption": "この投稿のために生成した挿絵"})
-            offset = (99 - (post_number * 10 + author_number)) * 3
+            offset = (post_number * 10 + author_number) * 3
             fields = [sql(pid), sql(aid), sql(author["name"]), sql(category), sql(title),
                       sql(json.dumps(blocks, ensure_ascii=False, separators=(",", ":"))) + "::jsonb",
                       "ARRAY[" + ",".join(map(sql, tags)) + "]::text[]",
@@ -73,7 +79,7 @@ def main():
     ]
     output.append(",\n".join(paper_rows) + " on conflict(id) do update set "
                   "author=excluded.author, category=excluded.category, title=excluded.title, "
-                  "blocks=excluded.blocks, tags=excluded.tags "
+                  "blocks=excluded.blocks, tags=excluded.tags, created_at=excluded.created_at "
                   "where public.papers.sample_author_id=excluded.sample_author_id;")
     (ROOT / "supabase/demo-seed.sql").write_text("\n".join(output) + "\n")
     print("Wrote 10 sample authors and 100 posts")

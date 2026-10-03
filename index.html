@@ -97,7 +97,7 @@
       if(!list.length){grid.append(el("div","empty",filter==="自分の下書き"?"まだ下書きがありません。「論文を書く」から最初の一編を作ってみましょう。":"このカテゴリーにはまだ論文がありません。"));return}
       for(const p of list){
         const card=el("article","paper"),head=el("div","paperhead"),tag=el("span","tag",p.category||"暮らし");
-        const status=el("span","",p.local?"自分の下書き":p.repostBy?`${p.repostBy}さんがリポスト`:p.remote?"公開投稿":"サンプル作品"),title=el("h3","",p.title),summary=el("p","",summaryFor(p));
+        const status=el("span","",p.local?"自分の下書き":p.repostBy?`${p.repostBy}さんがリポスト`:p.sample?"公式サンプル":p.remote?"公開投稿":"サンプル作品"),title=el("h3","",p.title),summary=el("p","",summaryFor(p));
         const foot=el("div","paperfoot"),author=el(p.remote?"button":"span",p.remote?"author-button":"",`著者：${p.author||"匿名研究者"}`),btn=el("button","","論文を読む");
         if(p.remote){author.type="button";author.addEventListener("click",()=>window.bonbonOpenProfile?.(p.user_id))}
         btn.type="button";btn.addEventListener("click",()=>openPaper(p));head.append(tag,status);foot.append(author,btn);card.append(head);
@@ -114,15 +114,16 @@
     }
     function openPaper(p){
       readContent.replaceChildren();
-      readContent.append(el("p","readmeta",`${p.category||"暮らし"} · ${p.local?"自分の下書き":p.remote?"公開投稿":"サンプル作品"}`),el("h2","readtitle",p.title));
+      readContent.append(el("p","readmeta",`${p.category||"暮らし"} · ${p.local?"自分の下書き":p.sample?"公式サンプル":p.remote?"公開投稿":"サンプル作品"}`),el("h2","readtitle",p.title));
       readContent.querySelector("h2").id="read-title";
       if(Array.isArray(p.tags)&&p.tags.length)readContent.append(el("p","readmeta",p.tags.map(t=>`#${t}`).join("  ")));
       if(p.source_paper_id&&p.source_kind){const source=el("button","author-button",p.source_kind==="replication"?"元の論文（追試）を読む":"引用元の論文を読む");source.type="button";source.addEventListener("click",()=>window.bonbonOpenPaperById?.(p.source_paper_id));readContent.append(source)}
       const blocks=blocksFor(p);
       if(!blocks.length) readContent.append(el("p","read-empty","本文はまだありません。"));
       for(const block of blocks){
-        if(block.type==="image" && (typeof block.src==="string" && block.src.startsWith("data:image/jpeg;base64,") || p.remote && typeof block.path==="string" && window.bonbonImageUrl)){
-          const figure=el("figure","read-image"),img=el("img");img.src=p.remote?window.bonbonImageUrl(block.path):block.src;img.alt=block.caption||"論文に添えられた画像";img.loading="lazy";figure.append(img);
+        const sampleAsset=typeof block.asset==="string"&&/^images\/(sock-detective|checkout-lines|reply-at-night|umbrella-choices)\.jpg$/.test(block.asset);
+        if(block.type==="image" && (typeof block.src==="string" && block.src.startsWith("data:image/jpeg;base64,") || p.remote && typeof block.path==="string" && window.bonbonImageUrl || sampleAsset)){
+          const figure=el("figure","read-image"),img=el("img");img.src=sampleAsset?new URL(block.asset,location.href).href:p.remote?window.bonbonImageUrl(block.path):block.src;img.alt=block.caption||"論文に添えられた画像";img.loading="lazy";figure.append(img);
           if(block.caption)figure.append(el("figcaption","",block.caption));readContent.append(figure);
         } else if(block.type==="text" && (block.heading||block.body)){
           const section=el("section","readsection");
@@ -267,7 +268,7 @@
     };
     render();
   </script>
-  <script src="social.js?v=20261003-4"></script>
-  <script src="community.js?v=20261003-3"></script>
+  <script src="social.js?v=20261003-5"></script>
+  <script src="community.js?v=20261003-4"></script>
 </body>
 </html>

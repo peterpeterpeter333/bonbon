@@ -55,7 +55,8 @@
     return papers.slice().sort((a, b) => score(b) - score(a));
   };
   window.bonbonRepostFeed = () => reposts.filter(item => item.paper).map(item => ({
-    ...item.paper, remote: true, repostActor: item.user_id,
+    ...item.paper, user_id: item.paper.user_id || item.paper.sample_author_id,
+    sample: !!item.paper.sample_author_id, remote: true, repostActor: item.user_id,
     repostBy: authorName(item.user_id), repostQuote: item.quote,
     feedCreatedAt: item.created_at
   }));
@@ -75,15 +76,19 @@
     if (!client) return;
     const requests = [
       client.from("profiles").select("user_id,handle,display_name,bio").limit(500),
+      client.from("sample_authors").select("id,handle,display_name,bio").limit(100),
       client.from("paper_likes").select("paper_id,user_id").limit(2000),
       client.from("comments").select("paper_id").limit(2000),
-      client.from("reposts").select("paper_id,user_id,quote,created_at,paper:papers(id,user_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at)").order("created_at", { ascending: false }).limit(500),
-      client.from("follows").select("follower_id,followed_id").limit(2000)
+      client.from("reposts").select("paper_id,user_id,quote,created_at,paper:papers(id,user_id,sample_author_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at)").order("created_at", { ascending: false }).limit(500),
+      client.from("follows").select("follower_id,followed_id").limit(2000),
+      client.from("sample_follows").select("follower_id,sample_author_id").limit(2000)
     ];
     if (viewer) requests.push(
       client.from("bookmarks").select("paper_id").eq("user_id", viewer.id).limit(500),
       client.from("user_mutes").select("muted_id").eq("muter_id", viewer.id),
       client.from("user_blocks").select("blocked_id").eq("blocker_id", viewer.id),
+      client.from("sample_mutes").select("sample_author_id").eq("muter_id", viewer.id),
+      client.from("sample_blocks").select("sample_author_id").eq("blocker_id", viewer.id),
       client.from("moderators").select("user_id").eq("user_id", viewer.id),
       client.from("paid_like_credits").select("balance").eq("user_id", viewer.id).maybeSingle()
     );
@@ -93,25 +98,31 @@
       return;
     }
     profiles = new Map(results[0].data.map(p => [p.user_id, p]));
+    for (const p of results[1].data) profiles.set(p.id, { ...p, sample: true });
     likeCounts = new Map(); myLikes = new Set();
-    for (const like of results[1].data) {
+    for (const like of results[2].data) {
       likeCounts.set(like.paper_id, numberFor(likeCounts, like.paper_id) + 1);
       if (like.user_id === viewer?.id) myLikes.add(like.paper_id);
     }
     commentCounts = new Map();
-    for (const comment of results[2].data) commentCounts.set(comment.paper_id, numberFor(commentCounts, comment.paper_id) + 1);
-    reposts = results[3].data;
+    for (const comment of results[3].data) commentCounts.set(comment.paper_id, numberFor(commentCounts, comment.paper_id) + 1);
+    reposts = results[4].data;
     repostCounts = new Map(); myReposts = new Set();
     for (const item of reposts) {
       repostCounts.set(item.paper_id, numberFor(repostCounts, item.paper_id) + 1);
       if (item.user_id === viewer?.id) myReposts.add(item.paper_id);
     }
-    following = new Set(results[4].data.filter(item => item.follower_id === viewer?.id).map(item => item.followed_id));
-    myBookmarks = new Set((results[5]?.data || []).map(item => item.paper_id));
-    muted = new Set((results[6]?.data || []).map(item => item.muted_id));
-    blocked = new Set((results[7]?.data || []).map(item => item.blocked_id));
-    moderator = !!results[8]?.data?.length;
-    credits = results[9]?.data?.balance || 0;
+    following = new Set([
+      ...results[5].data.filter(item => item.follower_id === viewer?.id).map(item => item.followed_id),
+      ...results[6].data.filter(item => item.follower_id === viewer?.id).map(item => item.sample_author_id)
+    ]);
+    myBookmarks = new Set((results[7]?.data || []).map(item => item.paper_id));
+    muted = new Set([...(results[8]?.data || []).map(item => item.muted_id),
+      ...(results[10]?.data || []).map(item => item.sample_author_id)]);
+    blocked = new Set([...(results[9]?.data || []).map(item => item.blocked_id),
+      ...(results[11]?.data || []).map(item => item.sample_author_id)]);
+    moderator = !!results[12]?.data?.length;
+    credits = results[13]?.data?.balance || 0;
     window.bonbonRender?.();
   }
 
@@ -243,10 +254,15 @@
     const person = profiles.get(userId);
     if (!person) { showToast("プロフィールを読み込めませんでした"); return; }
     profileContent.replaceChildren();
-    profileContent.append(el("h3", "", person.display_name), el("p", "hint", `@${person.handle}`), el("p", "", person.bio || "自己紹介はまだありません。"));
+    profileContent.append(el("h3", "", person.display_name),
+      el("p", "hint", `@${person.handle}${person.sample ? " · 公式サンプル" : ""}`),
+      el("p", "", person.bio || "自己紹介はまだありません。"));
     const [followersResult, papersResult] = await Promise.all([
-      client.from("follows").select("follower_id").eq("followed_id", userId),
-      client.from("papers").select("id,title,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20)
+      person.sample ? client.from("sample_follows").select("follower_id").eq("sample_author_id", userId)
+        : client.from("follows").select("follower_id").eq("followed_id", userId),
+      client.from("papers").select("id,title,created_at")
+        .eq(person.sample ? "sample_author_id" : "user_id", userId)
+        .order("created_at", { ascending: false }).limit(20)
     ]);
     const stats = el("div", "profile-stats");
     stats.append(el("span", "", `フォロワー ${followersResult.data?.length || 0}人`), el("span", "", `論文 ${papersResult.data?.length || 0}本`));
@@ -271,14 +287,16 @@
       const actions = el("div", "read-actions");
       actions.append(button(following.has(userId) ? "フォロー解除" : "フォロー", async () => {
         if (needsLogin()) return;
+        const table = person.sample ? "sample_follows" : "follows";
+        const targetColumn = person.sample ? "sample_author_id" : "followed_id";
         const { error } = following.has(userId)
-          ? await client.from("follows").delete().eq("follower_id", viewer.id).eq("followed_id", userId)
-          : await client.from("follows").insert({ follower_id: viewer.id, followed_id: userId });
+          ? await client.from(table).delete().eq("follower_id", viewer.id).eq(targetColumn, userId)
+          : await client.from(table).insert({ follower_id: viewer.id, [targetColumn]: userId });
         if (error) showToast("フォローを変更できませんでした"); else { await refreshCommunity(); showProfile(userId); }
       }));
       for (const [kind, active, table, ownerColumn, targetColumn] of [
-        ["ミュート", muted.has(userId), "user_mutes", "muter_id", "muted_id"],
-        ["ブロック", blocked.has(userId), "user_blocks", "blocker_id", "blocked_id"]
+        ["ミュート", muted.has(userId), person.sample ? "sample_mutes" : "user_mutes", "muter_id", person.sample ? "sample_author_id" : "muted_id"],
+        ["ブロック", blocked.has(userId), person.sample ? "sample_blocks" : "user_blocks", "blocker_id", person.sample ? "sample_author_id" : "blocked_id"]
       ]) actions.append(button(active ? `${kind}解除` : kind, async () => {
         if (needsLogin()) return;
         const { error } = active ? await client.from(table).delete().eq(ownerColumn, viewer.id).eq(targetColumn, userId)
@@ -329,9 +347,10 @@
     if (!/^[0-9a-f-]{36}$/i.test(id)) return;
     let paper = window.bonbonPublicPapers?.().find(item => item.id === id);
     if (!paper) {
-      const { data, error } = await client.from("papers").select("id,user_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at").eq("id", id).maybeSingle();
+      const { data, error } = await client.from("papers").select("id,user_id,sample_author_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at").eq("id", id).maybeSingle();
       if (error || !data) { showToast("論文が見つかりませんでした"); return; }
-      paper = { ...data, remote: true };
+      paper = { ...data, user_id: data.user_id || data.sample_author_id,
+        sample: !!data.sample_author_id, remote: true };
     }
     const readDialog = document.getElementById("read-dialog");
     if (readDialog.open) readDialog.close();

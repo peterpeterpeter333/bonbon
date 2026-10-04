@@ -107,16 +107,28 @@
       return client.storage.from("paper-images").getPublicUrl(path).data.publicUrl;
     };
 
-    window.bonbonCardActions = (paper, foot) => {
-      const actions = el("div", "social-actions");
+    function moderationActions(paper, className = "moderation-actions") {
+      const actions = el("div", className);
       const own = user?.id === paper.user_id;
       const mayDelete = own || window.bonbonIsModerator?.();
-      const button = el("button", `social-action${mayDelete ? " dangerbutton" : ""}`, mayDelete ? "削除" : "通報");
-      button.type = "button";
-      button.addEventListener("click", () => mayDelete ? deletePaper(paper) : reportPaper(paper));
-      actions.append(button);
-      foot.append(actions);
-    };
+      if (!own) {
+        const report = el("button", "social-action", "通報");
+        report.type = "button";
+        report.addEventListener("click", () => reportPaper(paper));
+        actions.append(report);
+      }
+      if (mayDelete) {
+        const remove = el("button", "social-action dangerbutton", "削除");
+        remove.type = "button";
+        remove.addEventListener("click", () => deletePaper(paper));
+        actions.append(remove);
+      }
+      return actions;
+    }
+
+    window.bonbonCardActions = (paper, foot) => foot.append(moderationActions(paper));
+    window.bonbonReadModerationActions = (paper, content) =>
+      content.append(moderationActions(paper, "read-actions moderation-actions"));
 
     async function loadPapers() {
       const { data, error } = await client.from("papers")

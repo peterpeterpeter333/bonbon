@@ -22,6 +22,7 @@
     @media(max-width:600px){.topin{padding:0 12px;min-height:66px;gap:8px}.logo{font-size:1rem}.logo span{display:none}.accountbar{gap:0}.accountbar span{display:none}.accountbar button{white-space:nowrap;padding:7px 9px}.topbutton{margin-left:0;padding:9px 10px;font-size:.78rem;white-space:nowrap}main{padding:20px 16px 70px}.introcard{padding:24px 22px}.aside{padding:22px}.intro h1{font-size:1.55rem}.sectionhead{margin-top:38px}.grid{grid-template-columns:1fr}.paper{min-height:235px}.formgrid{grid-template-columns:1fr;gap:0}.dialogin{padding:22px 18px}.block-toolbar{align-items:flex-start;flex-direction:column}.block-kind{white-space:nowrap}.footer{padding:24px 16px;flex-direction:column}.formactions{align-items:stretch;flex-direction:column}.formactions .primary{width:100%}}
     #existing-login{margin-top:20px;border-top:1px solid #e0e8ef;padding-top:16px}#existing-login summary{cursor:pointer;color:#44627f;font-size:.85rem;font-weight:700}#guest-help{margin-top:15px}
     .report-card{border:1px solid #dce5ee;border-radius:13px;padding:15px;margin-top:12px;background:#fbfdff}.report-card h3{font-size:1rem;margin:4px 0 8px}.report-card p{line-height:1.7;white-space:pre-wrap;margin:8px 0}.report-card .report-meta{color:#697b8d;font-size:.78rem}.report-card .read-actions{margin-bottom:0}
+    .paperfoot .moderation-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;width:100%;margin-top:2px}.moderation-actions .social-action{min-width:40px;white-space:nowrap}.read-actions.moderation-actions{justify-content:flex-end;border-top:1px solid #e7edf3;padding-top:10px}
     @media(max-width:600px){.topin{flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.topbutton{margin-left:auto}.accountbar{order:3;width:100%;justify-content:flex-end;margin-left:0}.accountbar button{font-size:.72rem;padding:6px 8px}}
   </style>
 </head>
@@ -140,6 +141,7 @@
       }
       readContent.append(el("p","readbottom",`著者：${p.author||"匿名研究者"}`));
       if(p.remote&&window.bonbonReadActions)window.bonbonReadActions(p,readContent);
+      if(p.remote&&window.bonbonReadModerationActions)window.bonbonReadModerationActions(p,readContent);
       readDialog.showModal();
     }
     function showToast(message){toast.textContent=message;toast.classList.add("show");clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.classList.remove("show"),3200)}
@@ -274,7 +276,7 @@
     };
     render();
   </script>
-  <script src="social.js?v=20261004-admin-1"></script>
+  <script src="social.js?v=20261004-admin-actions-1"></script>
   <script src="community.js?v=20261004-admin-2"></script>
 </body>
 </html>

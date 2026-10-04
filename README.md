@@ -6,6 +6,10 @@
 
 https://peterpeterpeter333.github.io/bonbon/
 
+- [利用規約](https://peterpeterpeter333.github.io/bonbon/terms.html)
+- [プライバシーポリシー](https://peterpeterpeter333.github.io/bonbon/privacy.html)
+- [投稿ガイドライン](https://peterpeterpeter333.github.io/bonbon/community-guidelines.html)
+
 GitHub Pages は `main` のルートから公開しています。共有投稿は Supabase に保存し、下書きは各端末の `localStorage` に保存します。
 
 ## 現在できること
@@ -47,8 +51,8 @@ Supabase プロジェクト `bonbon` に既存の SQL とゲストプロフィ�
 - 管理者の投稿削除時には画像も Storage から削除します。画像削除が失敗した場合は、Dashboard で残った画像を確認してください。
 - 応援機能は未実装です。将来有料で提供する場合は、いいねとは別の記録と決済確認を用意します。
 - ゲストはこのブラウザに保存された匿名ログイン情報で投稿を管理します。ブラウザデータの削除や端末変更後は同じゲストとして管理できません。後からメール連携する際は、既存ゲストIDを引き継ぐ方法を実装します。
-- 一般公開を拡大する前に、利用規約・プライバシー説明・通報対応手順を用意します。
+- 利用規約、プライバシーポリシー、投稿ガイドラインを公開しています。通報の確認と危険性の高い内容への速やかな対応は運営者が継続する必要があります。
 
 ## 次に確認すること
 
-まずゲストプロフィールで画像付き公開投稿と交流機能を試します。メール確認と Resend は利用者が集まってから [`docs/email-setup.md`](docs/email-setup.md) に従って設定します。一般公開を広げる前に規約・プライバシー説明、通報対応、アカウント削除も整えます。広告と応援は [`ROADMAP.md`](ROADMAP.md) の順番で追加します。
+まずゲストプロフィールで画像付き公開投稿・コメント通報・退会を実機で試します。メール確認と Resend は利用者が集まってから [`docs/email-setup.md`](docs/email-setup.md) に従って設定します。広告と応援は [`ROADMAP.md`](ROADMAP.md) の順番で追加します。

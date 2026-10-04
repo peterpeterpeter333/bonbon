@@ -2,7 +2,7 @@
 
 日常の小さな疑問を、自由な見出し・文章・画像で「論文もどき」にするサイトです。
 
-iPhoneアプリのXcodeプロジェクトは [`ios/Bonbon.xcodeproj`](ios/Bonbon.xcodeproj) にあります。ネイティブの閲覧・検索・保存・共有画面と、投稿・交流用のWeb画面を備えています。署名なしのiPhone向けビルドは確認済みです。実機・TestFlightでの確認はこれからです。
+iPhoneアプリのXcodeプロジェクトは [`ios/Bonbon.xcodeproj`](ios/Bonbon.xcodeproj) にあります。ネイティブの閲覧・検索・保存・共有画面と、投稿・交流用のWeb画面を備えています。2026年10月4日に署名してiPhoneへインストールし、Xcodeで起動を確認しました。画面上の各操作とTestFlightでの確認はこれからです。
 
 ## 公開サイト
 

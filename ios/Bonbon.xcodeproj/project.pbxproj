@@ -1,57 +1,155 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 77;
+	classes = {
+	};
+	objectVersion = 71;
 	objects = {
-		A00000000000000000000001 = {
+
+/* Begin PBXFileReference section */
+		A0000000000000000000000B /* Bonbon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bonbon.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A0000000000000000000000A /* Bonbon */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Bonbon; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000004 = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000000A /* Bonbon */,
+				A00000000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000000B /* Bonbon.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000002 /* Bonbon */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000006 /* Build configuration list for PBXNativeTarget "Bonbon" */;
+			buildPhases = (
+				A00000000000000000000007 /* Sources */,
+				A00000000000000000000008 /* Frameworks */,
+				A00000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A0000000000000000000000A /* Bonbon */,
+			);
+			name = Bonbon;
+			packageProductDependencies = (
+			);
+			productName = Bonbon;
+			productReference = A0000000000000000000000B /* Bonbon.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 2700;
-				TargetAttributes = { A00000000000000000000002 = { CreatedOnToolsVersion = 27.0; }; };
+				TargetAttributes = {
+					A00000000000000000000002 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
 			};
-			buildConfigurationList = A00000000000000000000003;
+			buildConfigurationList = A00000000000000000000003 /* Build configuration list for PBXProject "Bonbon" */;
 			compatibilityVersion = "Xcode 16.0";
 			developmentRegion = ja;
 			hasScannedForEncodings = 0;
-			knownRegions = (ja, en, Base);
+			knownRegions = (
+				ja,
+				en,
+				Base,
+			);
 			mainGroup = A00000000000000000000004;
-			productRefGroup = A00000000000000000000005;
+			productRefGroup = A00000000000000000000005 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (A00000000000000000000002);
+			targets = (
+				A00000000000000000000002 /* Bonbon */,
+			);
 		};
-		A00000000000000000000002 = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A00000000000000000000006;
-			buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009);
-			buildRules = ();
-			dependencies = ();
-			fileSystemSynchronizedGroups = (A0000000000000000000000A);
-			name = Bonbon;
-			packageProductDependencies = ();
-			productName = Bonbon;
-			productReference = A0000000000000000000000B;
-			productType = "com.apple.product-type.application";
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A00000000000000000000003 = { isa = XCConfigurationList; buildConfigurations = (A0000000000000000000000C, A0000000000000000000000D); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A00000000000000000000004 = { isa = PBXGroup; children = (A0000000000000000000000A, A00000000000000000000005); sourceTree = "<group>"; };
-		A00000000000000000000005 = { isa = PBXGroup; children = (A0000000000000000000000B); name = Products; sourceTree = "<group>"; };
-		A00000000000000000000006 = { isa = XCConfigurationList; buildConfigurations = (A0000000000000000000000E, A0000000000000000000000F); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A00000000000000000000007 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A0000000000000000000000A = { isa = PBXFileSystemSynchronizedRootGroup; path = Bonbon; sourceTree = "<group>"; };
-		A0000000000000000000000B = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bonbon.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A0000000000000000000000C = { isa = XCBuildConfiguration; buildSettings = { DEBUG_INFORMATION_FORMAT = dwarf; GCC_OPTIMIZATION_LEVEL = 0; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
-		A0000000000000000000000D = { isa = XCBuildConfiguration; buildSettings = { DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release; };
-		A0000000000000000000000E = {
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A0000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A0000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		A0000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K3MTX6RVB9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "論文もどき";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
@@ -68,12 +166,13 @@
 			};
 			name = Debug;
 		};
-		A0000000000000000000000F = {
+		A0000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K3MTX6RVB9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "論文もどき";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
@@ -90,6 +189,28 @@
 			};
 			name = Release;
 		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000003 /* Build configuration list for PBXProject "Bonbon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0000000000000000000000C /* Debug */,
+				A0000000000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000006 /* Build configuration list for PBXNativeTarget "Bonbon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0000000000000000000000E /* Debug */,
+				A0000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
 	};
-	rootObject = A00000000000000000000001;
+	rootObject = A00000000000000000000001 /* Project object */;
 }

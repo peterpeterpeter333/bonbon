@@ -16,7 +16,7 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 - 投稿の共有URL、プロフィール編集、フォロー、フォロー中の投稿、通知、保存、コメント、リポスト、引用コメント、追試・引用元へのリンク。
 - いいねは各投稿への初回のみ無料。2回目以降は有料クレジットが必要です。決済は価格と決済サービスが決まるまで利用できません。
 - 投稿・コメントの削除、ミュート・ブロック、公開投稿の通報。
-- 10人の「公式サンプル」プロフィールによる100件の作例。各投稿に問い・仮説、未実施の検証計画、考察と反例を掲載。各プロフィールの代表作10件は反証条件と仮結論も加えています。4件に生成画像を添付。サンプルは実在の利用者でもログイン可能なアカウントでもありません。
+- 10人の「公式サンプル」プロフィールによる、日常をコミカルに研究する12件の作例。各投稿は疑問・仮説・観察または検証案・結論で構成し、3件に生成イラストを添付。サンプルは実在の利用者でもログイン可能なアカウントでもありません。
 - 論文カード全体から詳細を開けます。著者名、タグ、いいねなどの操作は個別に動きます。
 
 ## 共有投稿の設定
@@ -24,12 +24,12 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 1. Supabase でプロジェクトを作成します。
 2. Supabase の SQL Editor で [`supabase/setup.sql`](supabase/setup.sql) を実行します。公開投稿テーブル、通報テーブル、画像バケット、アクセス制御を作ります。
 3. 続けて [`supabase/social.sql`](supabase/social.sql) を実行します。プロフィール、交流、通知、おすすめに使うデータを追加します。
-4. サンプル投稿を表示する場合は [`supabase/demo-support.sql`](supabase/demo-support.sql)、[`supabase/demo-seed.sql`](supabase/demo-seed.sql) の順に実行します。元原稿は [`supabase/demo-content.json`](supabase/demo-content.json)、[`supabase/demo-expansions.txt`](supabase/demo-expansions.txt)、[`supabase/demo-featured.json`](supabase/demo-featured.json) にあり、`python3 scripts/build_demo_seed.py` で SQL を再生成できます。再実行すると同じ100件を更新し、重複は作りません。
+4. サンプル投稿を表示する場合は [`supabase/demo-support.sql`](supabase/demo-support.sql)、[`supabase/demo-seed.sql`](supabase/demo-seed.sql) の順に実行します。元原稿は [`supabase/comic-papers.json`](supabase/comic-papers.json) にあり、`python3 scripts/build_demo_seed.py` で SQL を再生成できます。再実行すると公式サンプルを同じ12件に整え、重複は作りません。一般ユーザーの投稿は削除しません。
 5. Authentication → URL Configuration で Site URL と Redirect URL に `https://peterpeterpeter333.github.io/bonbon/` を設定します。
 6. `config.js` にプロジェクト URL と **publishable key** を入れて `main` に反映します。これはブラウザ向けのキーです。`service_role` や secret key は入れないでください。
 7. 公開サイトでメールリンクのログイン、2台の端末からの投稿閲覧、画像投稿、投稿削除、通報を確認します。
 
-Supabase プロジェクト `bonbon` で4本の SQL を実行済みです。サンプルは10プロフィール・100投稿・画像付き4投稿と集計で確認しています。メールリンクからの本人ログインと、ログイン後の投稿・画像アップロード・交流機能は運営者アカウントで確認してください。
+Supabase プロジェクト `bonbon` で4本の SQL を実行済みです。サンプルは10プロフィール・12投稿・画像付き3投稿です。メールリンクからの本人ログインと、ログイン後の投稿・画像アップロード・交流機能は運営者アカウントで確認してください。
 
 ## 安全な運用の最低限
 

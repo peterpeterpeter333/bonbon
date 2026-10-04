@@ -21,7 +21,7 @@ alter table public.papers add constraint papers_one_author_check check
   ((user_id is not null) <> (sample_author_id is not null));
 create index if not exists papers_sample_author_idx on public.papers(sample_author_id);
 
--- 画像は従来の本人所有 Storage パスか、4つの生成済みサイト画像だけ受け入れます。
+-- 画像は本人所有 Storage パスか、公式サンプルの生成済みサイト画像だけ受け入れます。
 create or replace function public.valid_paper_blocks(payload jsonb, owner_id uuid)
 returns boolean language plpgsql immutable set search_path = '' as $$
 declare item jsonb; image_count integer := 0;
@@ -44,7 +44,9 @@ begin
       elsif jsonb_typeof(item->'asset') = 'string' then
         if (item->>'asset') not in (
           'images/sock-detective.jpg', 'images/checkout-lines.jpg',
-          'images/reply-at-night.jpg', 'images/umbrella-choices.jpg'
+          'images/reply-at-night.jpg', 'images/umbrella-choices.jpg',
+          'images/on-my-way.jpg', 'images/microwave-second.jpg',
+          'images/anything-is-fine.jpg'
         ) then return false; end if;
       else return false;
       end if;

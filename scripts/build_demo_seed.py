@@ -1,4 +1,4 @@
-"""Build an idempotent SQL seed for the 10 clearly labelled sample authors."""
+"""Build the curated comic sample seed. Only existing sample papers are replaced."""
 
 import json
 import uuid
@@ -6,83 +6,79 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-AUTHORS = json.loads((ROOT / "supabase/demo-content.json").read_text())
-EXPANSIONS = {}
-FEATURED = json.loads((ROOT / "supabase/demo-featured.json").read_text())
-current_author = None
-for line in (ROOT / "supabase/demo-expansions.txt").read_text().splitlines():
-    if line.startswith("#"):
-        current_author = line[1:]
-        assert current_author not in EXPANSIONS
-        EXPANSIONS[current_author] = []
-    else:
-        plan, discussion = line.split("|", 1)
-        EXPANSIONS[current_author].append((plan, discussion))
+PAPERS = json.loads((ROOT / "supabase/comic-papers.json").read_text())
 NAMESPACE = uuid.UUID("3f97b607-b8e3-4b3d-9932-145338211bbb")
+AUTHORS = {
+    "nemuri_lab": ("ねむり計測室", "眠気と休日を調べる公式サンプル。実在の利用者ではありません。"),
+    "kitchen_notes": ("台所の観察者", "台所の小事件を調べる公式サンプル。実在の利用者ではありません。"),
+    "train_window": ("通勤の窓際", "移動と待ち合わせを調べる公式サンプル。実在の利用者ではありません。"),
+    "reply_pending": ("返信保留中", "会話のすれ違いを調べる公式サンプル。実在の利用者ではありません。"),
+    "math_in_pocket": ("ポケットの数学", "日常の計算違いを調べる公式サンプル。実在の利用者ではありません。"),
+    "town_margin": ("まちの余白", "街で見つけた疑問を調べる公式サンプル。実在の利用者ではありません。"),
+    "otaku_shelf": ("オタクの棚", "趣味と時間を調べる公式サンプル。実在の利用者ではありません。"),
+    "word_collector": ("言葉の採集者", "言葉の妙な働きを調べる公式サンプル。実在の利用者ではありません。"),
+    "object_philosophy": ("ものの哲学", "道具と習慣を調べる公式サンプル。実在の利用者ではありません。"),
+    "rainy_statistics": ("雨の日統計", "天気と体感を調べる公式サンプル。実在の利用者ではありません。"),
+}
+IMAGES = {"on-my-way.jpg", "microwave-second.jpg", "anything-is-fine.jpg"}
 
 
 def sql(value):
-    if isinstance(value, uuid.UUID):
-        return f"'{value}'"
-    if isinstance(value, str):
-        return "'" + value.replace("'", "''") + "'"
-    raise TypeError(value)
+    return "'" + str(value).replace("'", "''") + "'"
 
 
 def main():
-    assert len(AUTHORS) == 10
-    assert all(len(author["posts"]) == 10 for author in AUTHORS)
-    assert set(EXPANSIONS) == {author["handle"] for author in AUTHORS}
-    assert set(FEATURED) == set(EXPANSIONS)
-    assert all(len(items) == 10 for items in EXPANSIONS.values())
+    assert len(PAPERS) == 12
+    assert {paper["handle"] for paper in PAPERS} == set(AUTHORS)
+    assert len({paper["title"] for paper in PAPERS}) == len(PAPERS)
+    author_ids = {handle: uuid.uuid5(NAMESPACE, "author:" + handle) for handle in AUTHORS}
+    paper_ids = [uuid.uuid5(NAMESPACE, "comic:" + paper["title"]) for paper in PAPERS]
     author_rows = []
     paper_rows = []
-    for author in AUTHORS:
-        aid = uuid.uuid5(NAMESPACE, "author:" + author["handle"])
-        author_rows.append("(" + ",".join(map(sql, [aid, author["handle"], author["name"], author["bio"]])) + ")")
-    for post_number in range(10):
-        for author_number, author in enumerate(AUTHORS):
-            item = author["posts"][post_number]
-            title, body, category, tags = item[:4]
-            image = item[4] if len(item) > 4 else None
-            assert 1 <= len(title) <= 70 and 1 <= len(body) <= 500
-            assert category in {"暮らし", "食べもの", "人間関係"}
-            assert len(tags) <= 5 and all(1 <= len(t) <= 20 for t in tags)
-            aid = uuid.uuid5(NAMESPACE, "author:" + author["handle"])
-            pid = uuid.uuid5(NAMESPACE, "paper:" + author["handle"] + ":" + str(post_number))
-            plan, discussion = EXPANSIONS[author["handle"]][post_number]
-            blocks = [
-                {"type": "text", "heading": "問いと仮説", "body": body},
-                {"type": "text", "heading": "検証計画（未実施）", "body": plan},
-            ]
-            if post_number == 0:
-                blocks.append({"type": "text", "heading": "反証条件", "body": FEATURED[author["handle"]][0]})
-            blocks.append({"type": "text", "heading": "考察と反例", "body": discussion})
-            if post_number == 0:
-                blocks.append({"type": "text", "heading": "仮結論", "body": FEATURED[author["handle"]][1]})
-            assert all(len(block["body"]) <= 500 for block in blocks)
-            if image:
-                assert image in {"sock-detective.jpg", "checkout-lines.jpg", "reply-at-night.jpg", "umbrella-choices.jpg"}
-                blocks.append({"type": "image", "asset": "images/" + image, "caption": "この投稿のために生成した挿絵"})
-            offset = (post_number * 10 + author_number) * 3
-            fields = [sql(pid), sql(aid), sql(author["name"]), sql(category), sql(title),
-                      sql(json.dumps(blocks, ensure_ascii=False, separators=(",", ":"))) + "::jsonb",
-                      "ARRAY[" + ",".join(map(sql, tags)) + "]::text[]",
-                      f"now() - interval '{offset} hours'"]
-            paper_rows.append("(" + ",".join(fields) + ")")
+    for handle, (name, bio) in AUTHORS.items():
+        assert len(name) <= 30 and len(bio) <= 200
+        author_rows.append("(" + ",".join(map(sql, [author_ids[handle], handle, name, bio])) + ")")
+    for index, paper in enumerate(PAPERS):
+        handle = paper["handle"]
+        title = paper["title"]
+        category = paper["category"]
+        tags = paper["tags"]
+        assert 1 <= len(title) <= 70
+        assert category in {"暮らし", "食べもの", "人間関係"}
+        assert len(tags) <= 5 and all(1 <= len(tag) <= 20 for tag in tags)
+        blocks = []
+        for heading, body in paper["blocks"]:
+            assert len(heading) <= 40 and len(body) <= 500
+            blocks.append({"type": "text", "heading": heading, "body": body})
+        assert len(blocks) >= 3
+        if image := paper.get("image"):
+            assert image in IMAGES and (ROOT / "dist/images" / image).is_file()
+            blocks.insert(2, {"type": "image", "asset": "images/" + image, "caption": "この論文のために生成した挿絵"})
+        fields = [
+            sql(paper_ids[index]), sql(author_ids[handle]), sql(AUTHORS[handle][0]),
+            sql(category), sql(title),
+            sql(json.dumps(blocks, ensure_ascii=False, separators=(",", ":"))) + "::jsonb",
+            "ARRAY[" + ",".join(map(sql, tags)) + "]::text[]",
+            f"now() - interval '{index} hours'",
+        ]
+        paper_rows.append("(" + ",".join(fields) + ")")
     output = [
-        "-- 公式サンプルのみ。実ログイン用のユーザーは作りません。",
-        "-- demo-support.sql の後に実行。再実行すると同じ100件の本文を更新します。",
+        "-- 既存の公式サンプル100件のみを12件の新作へ入れ替えます。一般ユーザーの投稿は削除しません。",
+        "-- demo-support.sql の画像許可設定を更新してから実行してください。",
+        "begin;",
         "insert into public.sample_authors(id,handle,display_name,bio) values",
-        ",\n".join(author_rows) + " on conflict(id) do nothing;",
+        ",\n".join(author_rows) + " on conflict(id) do update set display_name=excluded.display_name,bio=excluded.bio;",
+        "delete from public.papers where sample_author_id in (" + ",".join(map(sql, author_ids.values())) + ")",
+        "  and id not in (" + ",".join(map(sql, paper_ids)) + ");",
         "insert into public.papers(id,sample_author_id,author,category,title,blocks,tags,created_at) values",
+        ",\n".join(paper_rows) + " on conflict(id) do update set "
+        "author=excluded.author,category=excluded.category,title=excluded.title,"
+        "blocks=excluded.blocks,tags=excluded.tags,created_at=excluded.created_at "
+        "where public.papers.sample_author_id=excluded.sample_author_id;",
+        "commit;",
     ]
-    output.append(",\n".join(paper_rows) + " on conflict(id) do update set "
-                  "author=excluded.author, category=excluded.category, title=excluded.title, "
-                  "blocks=excluded.blocks, tags=excluded.tags, created_at=excluded.created_at "
-                  "where public.papers.sample_author_id=excluded.sample_author_id;")
     (ROOT / "supabase/demo-seed.sql").write_text("\n".join(output) + "\n")
-    print("Wrote 10 sample authors and 100 posts")
+    print("Wrote 10 sample authors and 12 comic papers; old sample papers will be removed")
 
 
 if __name__ == "__main__":

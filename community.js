@@ -4,6 +4,9 @@
   const profileContent = document.getElementById("profile-content");
   const noticesDialog = document.getElementById("notices-dialog");
   const noticesContent = document.getElementById("notices-content");
+  const moderationButton = document.getElementById("moderation-button");
+  const moderationDialog = document.getElementById("moderation-dialog");
+  const moderationContent = document.getElementById("moderation-content");
   let client, feed = "new", viewer = null, moderator = false;
   let profiles = new Map(), likeCounts = new Map(), commentCounts = new Map();
   let repostCounts = new Map(), myLikes = new Set(), myBookmarks = new Set();
@@ -94,6 +97,7 @@
 
   async function refreshCommunity() {
     if (!client) return;
+    const requestedViewerId = viewer?.id;
     const requests = [
       client.from("profiles").select("user_id,handle,display_name,bio").limit(500),
       client.from("sample_authors").select("id,handle,display_name,bio").limit(100),
@@ -112,6 +116,7 @@
       client.from("moderators").select("user_id").eq("user_id", viewer.id)
     );
     const results = await Promise.all(requests);
+    if (requestedViewerId !== viewer?.id) return;
     if (results.some(result => result.error)) {
       console.warn("Community data could not be loaded", results.filter(result => result.error).map(result => result.error));
       return;
@@ -141,8 +146,56 @@
     blocked = new Set([...(results[9]?.data || []).map(item => item.blocked_id),
       ...(results[11]?.data || []).map(item => item.sample_author_id)]);
     moderator = !!results[12]?.data?.length;
+    moderationButton.hidden = !moderator;
+    if (!moderator && moderationDialog.open) moderationDialog.close();
     window.bonbonRender?.();
   }
+
+  async function loadReports() {
+    if (!moderator || !viewer) return;
+    moderationContent.replaceChildren(el("p", "hint", "報告を読み込んでいます…"));
+    const { data, error } = await client.from("paper_reports")
+      .select("id,paper_id,reason,created_at,status,handled_at,paper:papers(id,user_id,title,author,blocks)")
+      .order("created_at", { ascending: false }).limit(100);
+    moderationContent.replaceChildren();
+    if (error) { moderationContent.append(el("p", "hint", "報告を読み込めませんでした")); return; }
+    const reports = (data || []).sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1));
+    if (!reports.length) { moderationContent.append(el("p", "hint", "報告はまだありません。")); return; }
+    moderationContent.append(el("p", "hint", `未対応 ${reports.filter(item => item.status === "open").length}件 · 最近の報告 ${reports.length}件`));
+    for (const report of reports) {
+      const box = el("article", "report-card");
+      const state = { open: "未対応", resolved: "対応済み", dismissed: "却下" }[report.status] || report.status;
+      box.append(el("div", "report-meta", `${state} · ${new Date(report.created_at).toLocaleString("ja-JP")}`));
+      box.append(el("h3", "", report.paper?.title || "削除された論文"));
+      box.append(el("p", "", report.reason));
+      const actions = el("div", "read-actions");
+      if (report.paper) actions.append(button("投稿を見る", () => {
+        moderationDialog.close(); window.bonbonOpenPaperById?.(report.paper_id);
+      }));
+      if (report.status === "open") {
+        if (report.paper) actions.append(button("投稿を削除", async () => {
+          if (await window.bonbonDeletePaper?.(report.paper)) await loadReports();
+        }, "dangerbutton"));
+        for (const [label, status] of [["対応済みにする", "resolved"], ["報告を却下", "dismissed"]]) {
+          actions.append(button(label, async () => {
+            const { data: updated, error: updateError } = await client.from("paper_reports")
+              .update({ status, handled_at: new Date().toISOString(), handled_by: viewer.id })
+              .eq("id", report.id).eq("status", "open").select("id").maybeSingle();
+            if (updateError || !updated) { showToast("報告を更新できませんでした"); return; }
+            await loadReports();
+            showToast(status === "resolved" ? "対応済みにしました" : "報告を却下しました");
+          }));
+        }
+      }
+      box.append(actions);
+      moderationContent.append(box);
+    }
+  }
+  moderationButton.addEventListener("click", () => {
+    if (!moderator || !viewer) return;
+    moderationDialog.showModal();
+    loadReports();
+  });
 
   async function likePaper(paper) {
     if (needsLogin()) return;
@@ -397,6 +450,8 @@
   }
   window.addEventListener("bonbon:authchange", event => {
     viewer = event.detail.user;
+    moderator = false;
+    moderationButton.hidden = true;
     refreshCommunity();
   });
   if (window.bonbonClient) start({ detail: { client: window.bonbonClient } });

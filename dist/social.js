@@ -19,6 +19,7 @@
     const accountDialog = document.getElementById("account-dialog");
     const accountForm = document.getElementById("account-form");
     const guestStart = document.getElementById("guest-start");
+    const guestSwitch = document.getElementById("guest-switch");
     const publishButton = document.getElementById("publish-paper");
     const notice = document.getElementById("site-notice");
     let user = null, guestPromise = null;
@@ -35,6 +36,7 @@
       accountName.textContent = user?.is_anonymous ? "ゲスト" : user?.email || "";
       accountButton.textContent = user?.is_anonymous ? "ゲスト情報" : user ? "ログアウト" : "ゲストで始める";
       guestStart.hidden = !!user;
+      guestSwitch.hidden = !user?.is_anonymous;
       document.getElementById("guest-help").hidden = !user?.is_anonymous;
       document.getElementById("existing-login").hidden = !!user;
       document.getElementById("profile-button").hidden = !user;
@@ -59,6 +61,15 @@
       const identity = await ensureGuest();
       guestStart.disabled = false;
       if (identity) { accountDialog.close(); showToast("ゲストプロフィールを作りました。プロフィールから名前を変更できます"); }
+    });
+
+    guestSwitch.addEventListener("click", async () => {
+      if (!user?.is_anonymous) return;
+      if (!confirm("ゲストを終了して既存のメールアカウントに切り替えますか？ このゲストの投稿やプロフィールは、このブラウザから管理できなくなります。")) return;
+      const { error } = await client.auth.signOut();
+      if (error) { showToast("切り替えられませんでした"); return; }
+      document.getElementById("existing-login").open = true;
+      showToast("既存のメールアカウントでログインしてください");
     });
 
     accountButton.addEventListener("click", async () => {
@@ -176,14 +187,18 @@
     });
 
     async function deletePaper(paper) {
-      if (!user || paper.user_id !== user.id && !window.bonbonIsModerator?.()) return;
-      if (!confirm("この公開投稿を削除しますか？")) return;
+      if (!user || paper.user_id !== user.id && !window.bonbonIsModerator?.()) return false;
+      if (!confirm("この公開投稿を削除しますか？ この操作は取り消せません。")) return false;
       const { error } = await client.from("papers").delete().eq("id", paper.id);
-      if (error) { showToast("削除できませんでした"); return; }
+      if (error) { showToast("削除できませんでした"); return false; }
       const paths = (paper.blocks || []).filter(b => b.type === "image" && b.path).map(b => b.path);
-      if (paths.length && paper.user_id === user.id) await client.storage.from("paper-images").remove(paths);
+      let imageError = null;
+      if (paths.length) {
+        ({ error: imageError } = await client.storage.from("paper-images").remove(paths));
+      }
       await loadPapers();
-      showToast("公開投稿を削除しました");
+      showToast(imageError ? "投稿は削除しましたが、画像の削除に失敗しました。運営者が確認してください" : "公開投稿を削除しました");
+      return true;
     }
 
     async function reportPaper(paper) {
@@ -200,6 +215,7 @@
     window.bonbonClient = client;
     window.bonbonCurrentUser = () => user;
     window.bonbonReloadPapers = loadPapers;
+    window.bonbonDeletePaper = deletePaper;
     window.dispatchEvent(new CustomEvent("bonbon:ready", { detail: { client } }));
     loadPapers();
   }

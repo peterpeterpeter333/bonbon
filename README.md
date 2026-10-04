@@ -15,7 +15,7 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 - メール登録なしでゲストプロフィールを作り、公開投稿。カテゴリー・タグ・検索・新着・おすすめで閲覧できます。
 - 投稿の共有URL、プロフィール編集、フォロー、フォロー中の投稿、通知、保存、コメント、リポスト、引用コメント、追試・引用元へのリンク。
 - いいねは1人1回の無料リアクションで、もう一度押すと取り消せます。追加の「応援」は独立した機能として今後設計します。
-- 投稿・コメントの削除、ミュート・ブロック、公開投稿の通報。
+- 投稿・コメントの削除、ミュート・ブロック、公開投稿の通報。管理者は報告一覧から投稿を確認し、削除・対応済み・却下を選べます。
 - 10人の「公式サンプル」プロフィールによる、日常をコミカルに研究する12件の作例。各投稿は疑問・仮説・観察または検証案・結論で構成し、3件に生成イラストを添付。サンプルは実在の利用者でもログイン可能なアカウントでもありません。
 - 論文カード全体から詳細を開けます。著者名、タグ、いいねなどの操作は個別に動きます。
 
@@ -27,6 +27,7 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 4. サンプル投稿を表示する場合は [`supabase/demo-support.sql`](supabase/demo-support.sql)、[`supabase/demo-seed.sql`](supabase/demo-seed.sql) の順に実行します。元原稿は [`supabase/comic-papers.json`](supabase/comic-papers.json) にあり、`python3 scripts/build_demo_seed.py` で SQL を再生成できます。再実行すると旧100件の公式サンプルを非表示にし、新しい12件を公開します。旧投稿はデータベースに残るため復元できます。一般ユーザーの投稿は変更しません。
    以前の有料いいね方式を使っていたプロジェクトでは、[`supabase/likes-as-reactions.sql`](supabase/likes-as-reactions.sql) も実行します。
    ゲストプロフィールの初期名を使う場合は [`supabase/guest-profiles.sql`](supabase/guest-profiles.sql) を実行し、Supabase Authentication → Sign In / Providers で Anonymous Sign-Ins を有効にします。
+   管理者の報告一覧を使う場合は [`supabase/moderation.sql`](supabase/moderation.sql) も実行します。管理者IDの登録は Supabase Dashboard で行い、メールアドレスを公開リポジトリに書き込まないでください。
 5. Authentication → URL Configuration で Site URL と Redirect URL に `https://peterpeterpeter333.github.io/bonbon/` を設定します。
 6. `config.js` にプロジェクト URL と **publishable key** を入れて `main` に反映します。これはブラウザ向けのキーです。`service_role` や secret key は入れないでください。
 7. 公開サイトでメールリンクのログイン、2台の端末からの投稿閲覧、画像投稿、投稿削除、通報を確認します。
@@ -38,8 +39,8 @@ Supabase プロジェクト `bonbon` に既存の SQL とゲストプロフィ�
 - データベースには RLS を設定し、誰でも閲覧、ログインした本人だけが投稿・削除できるようにしています。
 - 画像バケットは公開用です。投稿に使った画像は URL を知る人が見られます。
 - 24時間あたり10投稿の簡易制限があります。大規模運用には追加の迷惑投稿対策が必要です。
-- 通報は `paper_reports` テーブルに蓄積されます。運営者が Supabase Dashboard で確認して対応する必要があります。
-- 運営者による削除を有効にするには、運営者がメールリンクで一度ログインした後、Supabase SQL Editor でそのメールアドレスを指定して `insert into public.moderators(user_id) select id from auth.users where email = '運営者のメールアドレス' on conflict do nothing;` を実行します。
+- 通報は `paper_reports` テーブルに蓄積されます。管理者はサイトの「報告」から未対応の投稿を確認できます。管理者権限は `moderators` テーブルと RLS で制御します。
+- 管理者の投稿削除時には画像も Storage から削除します。画像削除が失敗した場合は、Dashboard で残った画像を確認してください。
 - 応援機能は未実装です。将来有料で提供する場合は、いいねとは別の記録と決済確認を用意します。
 - ゲストはこのブラウザに保存された匿名ログイン情報で投稿を管理します。ブラウザデータの削除や端末変更後は同じゲストとして管理できません。後からメール連携する際は、既存ゲストIDを引き継ぐ方法を実装します。
 - 一般公開を拡大する前に、利用規約・プライバシー説明・通報対応手順を用意します。

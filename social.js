@@ -26,7 +26,7 @@
     accountbar.style.display = "flex";
     publishButton.hidden = false;
     notice.textContent = "公開投稿は誰でも読めます。メール登録なしでゲスト投稿できます。ゲストの投稿管理はこのブラウザのログイン情報が必要です。";
-    document.getElementById("save-help").textContent = "下書きはこの端末だけに保存されます。公開時はゲストプロフィールを作成します。";
+    const saveHelp = document.getElementById("save-help");
     liveMode = true;
     grid.replaceChildren(el("div", "loading", "公開投稿を読み込んでいます…"));
 
@@ -39,6 +39,7 @@
       document.getElementById("existing-login").hidden = !!user;
       document.getElementById("profile-button").hidden = !user;
       document.getElementById("notices-button").hidden = !user;
+      saveHelp.textContent = user ? "下書きはこの端末だけに保存されます。公開すると、あなたのプロフィールから読めるようになります。" : "下書きはこの端末だけに保存されます。公開時はゲストプロフィールを作成します。";
       render();
       window.dispatchEvent(new CustomEvent("bonbon:authchange", { detail: { user } }));
     }

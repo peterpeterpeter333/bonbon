@@ -12,7 +12,7 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 
 - タイトルだけで下書きを保存・編集・削除。見出しと文章は任意。文章は1ブロック500字まで。
 - 本文中に画像を最大3枚挿入。画像選択・貼り付けに対応し、保存前に縮小します。
-- メールリンクでログインして公開投稿。カテゴリー・タグ・検索・新着・おすすめで閲覧できます。
+- メール登録なしでゲストプロフィールを作り、公開投稿。カテゴリー・タグ・検索・新着・おすすめで閲覧できます。
 - 投稿の共有URL、プロフィール編集、フォロー、フォロー中の投稿、通知、保存、コメント、リポスト、引用コメント、追試・引用元へのリンク。
 - いいねは1人1回の無料リアクションで、もう一度押すと取り消せます。追加の「応援」は独立した機能として今後設計します。
 - 投稿・コメントの削除、ミュート・ブロック、公開投稿の通報。
@@ -26,11 +26,12 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 3. 続けて [`supabase/social.sql`](supabase/social.sql) を実行します。プロフィール、交流、通知、おすすめに使うデータを追加します。
 4. サンプル投稿を表示する場合は [`supabase/demo-support.sql`](supabase/demo-support.sql)、[`supabase/demo-seed.sql`](supabase/demo-seed.sql) の順に実行します。元原稿は [`supabase/comic-papers.json`](supabase/comic-papers.json) にあり、`python3 scripts/build_demo_seed.py` で SQL を再生成できます。再実行すると旧100件の公式サンプルを非表示にし、新しい12件を公開します。旧投稿はデータベースに残るため復元できます。一般ユーザーの投稿は変更しません。
    以前の有料いいね方式を使っていたプロジェクトでは、[`supabase/likes-as-reactions.sql`](supabase/likes-as-reactions.sql) も実行します。
+   ゲストプロフィールの初期名を使う場合は [`supabase/guest-profiles.sql`](supabase/guest-profiles.sql) を実行し、Supabase Authentication → Sign In / Providers で Anonymous Sign-Ins を有効にします。
 5. Authentication → URL Configuration で Site URL と Redirect URL に `https://peterpeterpeter333.github.io/bonbon/` を設定します。
 6. `config.js` にプロジェクト URL と **publishable key** を入れて `main` に反映します。これはブラウザ向けのキーです。`service_role` や secret key は入れないでください。
 7. 公開サイトでメールリンクのログイン、2台の端末からの投稿閲覧、画像投稿、投稿削除、通報を確認します。
 
-Supabase プロジェクト `bonbon` で4本の SQL を実行済みです。サンプルは10プロフィール・12投稿・画像付き3投稿です。メールリンクからの本人ログインと、ログイン後の投稿・画像アップロード・交流機能は運営者アカウントで確認してください。
+Supabase プロジェクト `bonbon` に既存の SQL とゲストプロフィール用 SQL を実行済みです。サンプルは10プロフィール・12投稿・画像付き3投稿です。ゲストでの公開投稿・画像アップロード・交流機能は実際のブラウザで確認してください。
 
 ## 安全な運用の最低限
 
@@ -40,8 +41,9 @@ Supabase プロジェクト `bonbon` で4本の SQL を実行済みです。サ�
 - 通報は `paper_reports` テーブルに蓄積されます。運営者が Supabase Dashboard で確認して対応する必要があります。
 - 運営者による削除を有効にするには、運営者がメールリンクで一度ログインした後、Supabase SQL Editor でそのメールアドレスを指定して `insert into public.moderators(user_id) select id from auth.users where email = '運営者のメールアドレス' on conflict do nothing;` を実行します。
 - 応援機能は未実装です。将来有料で提供する場合は、いいねとは別の記録と決済確認を用意します。
+- ゲストはこのブラウザに保存された匿名ログイン情報で投稿を管理します。ブラウザデータの削除や端末変更後は同じゲストとして管理できません。後からメール連携する際は、既存ゲストIDを引き継ぐ方法を実装します。
 - 一般公開を拡大する前に、利用規約・プライバシー説明・通報対応手順を用意します。
 
 ## 次に確認すること
 
-[`docs/email-setup.md`](docs/email-setup.md) に従い、Resend Free と外部 SMTP を設定します。その後、運営者アカウントでログインし、画像付き公開投稿と交流機能を端末間で試します。一般公開前に規約・プライバシー説明、通報対応、アカウント削除も整えます。広告と応援は [`ROADMAP.md`](ROADMAP.md) の順番で追加します。
+まずゲストプロフィールで画像付き公開投稿と交流機能を試します。メール確認と Resend は利用者が集まってから [`docs/email-setup.md`](docs/email-setup.md) に従って設定します。一般公開を広げる前に規約・プライバシー説明、通報対応、アカウント削除も整えます。広告と応援は [`ROADMAP.md`](ROADMAP.md) の順番で追加します。

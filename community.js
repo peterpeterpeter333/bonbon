@@ -42,7 +42,7 @@
   const needsLogin = () => {
     if (viewer) return false;
     document.getElementById("account-dialog").showModal();
-    showToast("この機能にはメールでのログインが必要です");
+    showToast("この機能にはゲストプロフィールが必要です。メール登録は不要です");
     return true;
   };
   const ownOrModerated = userId => viewer && (viewer.id === userId || moderator);
@@ -252,7 +252,7 @@
     content.append(comments);
     loadComments(paper, comments);
     if (!viewer) {
-      content.append(button("コメントするにはログイン", () => needsLogin(), "smallbutton"));
+      content.append(button("コメントするにはゲストで始める", () => needsLogin(), "smallbutton"));
       return;
     }
     const form = el("form", "field"), area = el("textarea");

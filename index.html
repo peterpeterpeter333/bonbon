@@ -86,7 +86,7 @@
       if(p.sample&&textBlocks[1]){
         const hypothesis=first.body.slice(0,65)+(first.body.length>65?"…":"");
         const plan=textBlocks[1].body.slice(0,55)+(textBlocks[1].body.length>55?"…":"");
-        return `仮説：${hypothesis}\n検証案：${plan}`;
+        return `${first.heading||"本文"}：${hypothesis}\n${textBlocks[1].heading||"続き"}：${plan}`;
       }
       return first ? first.body.slice(0,100)+(first.body.length>100?"…":"") : "タイトルから本文を想像してみよう。";
     }

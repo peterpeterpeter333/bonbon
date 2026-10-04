@@ -12,11 +12,17 @@ struct PaperBlock: Decodable, Hashable {
     let heading: String?
     let body: String?
     let path: String?
+    let asset: String?
     let caption: String?
 
     var imageURL: URL? {
-        guard let path, !path.isEmpty else { return nil }
-        return BonbonConfig.api.appending(path: "storage/v1/object/public/paper-images/\(path)")
+        if let path, !path.isEmpty {
+            return BonbonConfig.api.appending(path: "storage/v1/object/public/paper-images/\(path)")
+        }
+        if let asset, !asset.isEmpty {
+            return BonbonConfig.site.appending(path: asset)
+        }
+        return nil
     }
 }
 
@@ -73,8 +79,14 @@ final class PaperStore: ObservableObject {
                 return date
             }
             papers = try decoder.decode([Paper].self, from: data)
+            #if DEBUG
+            print("Bonbon loaded \(papers.count) papers")
+            #endif
             errorMessage = nil
         } catch {
+            #if DEBUG
+            print("Bonbon feed request failed: \(error)")
+            #endif
             errorMessage = "投稿を読み込めませんでした。通信を確認して再試行してください。"
         }
     }

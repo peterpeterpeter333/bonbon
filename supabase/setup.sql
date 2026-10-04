@@ -41,12 +41,13 @@ create table if not exists public.papers (
 );
 create index if not exists papers_created_at_idx on public.papers (created_at desc);
 create index if not exists papers_user_id_idx on public.papers (user_id);
+alter table public.papers add column if not exists sample_hidden boolean not null default false;
 alter table public.papers enable row level security;
 revoke all on public.papers from anon, authenticated;
 grant select on public.papers to anon, authenticated;
 grant insert, delete on public.papers to authenticated;
 drop policy if exists "Read published papers" on public.papers;
-create policy "Read published papers" on public.papers for select to anon, authenticated using (true);
+create policy "Read published papers" on public.papers for select to anon, authenticated using (not sample_hidden);
 drop policy if exists "Create own papers" on public.papers;
 create policy "Create own papers" on public.papers for insert to authenticated
   with check ((select auth.uid()) = user_id);

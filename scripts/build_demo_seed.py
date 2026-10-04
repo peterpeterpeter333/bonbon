@@ -1,4 +1,4 @@
-"""Build the curated comic sample seed. Only existing sample papers are replaced."""
+"""Build the curated comic sample seed. Old sample papers are hidden reversibly."""
 
 import json
 import uuid
@@ -63,22 +63,25 @@ def main():
         ]
         paper_rows.append("(" + ",".join(fields) + ")")
     output = [
-        "-- 既存の公式サンプル100件のみを12件の新作へ入れ替えます。一般ユーザーの投稿は削除しません。",
+        "-- 既存の公式サンプル100件のみ非表示にし、12件の新作を公開します。一般ユーザーの投稿は変更しません。",
         "-- demo-support.sql の画像許可設定を更新してから実行してください。",
         "begin;",
+        "alter table public.papers add column if not exists sample_hidden boolean not null default false;",
+        "drop policy if exists \"Read published papers\" on public.papers;",
+        "create policy \"Read published papers\" on public.papers for select to anon,authenticated using (not sample_hidden);",
         "insert into public.sample_authors(id,handle,display_name,bio) values",
         ",\n".join(author_rows) + " on conflict(id) do update set display_name=excluded.display_name,bio=excluded.bio;",
-        "delete from public.papers where sample_author_id in (" + ",".join(map(sql, author_ids.values())) + ")",
+        "update public.papers set sample_hidden=true where sample_author_id in (" + ",".join(map(sql, author_ids.values())) + ")",
         "  and id not in (" + ",".join(map(sql, paper_ids)) + ");",
-        "insert into public.papers(id,sample_author_id,author,category,title,blocks,tags,created_at) values",
-        ",\n".join(paper_rows) + " on conflict(id) do update set "
+        "insert into public.papers(id,sample_author_id,author,category,title,blocks,tags,created_at,sample_hidden) values",
+        ",\n".join(row[:-1] + ",false)" for row in paper_rows) + " on conflict(id) do update set "
         "author=excluded.author,category=excluded.category,title=excluded.title,"
-        "blocks=excluded.blocks,tags=excluded.tags,created_at=excluded.created_at "
+        "blocks=excluded.blocks,tags=excluded.tags,created_at=excluded.created_at,sample_hidden=false "
         "where public.papers.sample_author_id=excluded.sample_author_id;",
         "commit;",
     ]
     (ROOT / "supabase/demo-seed.sql").write_text("\n".join(output) + "\n")
-    print("Wrote 10 sample authors and 12 comic papers; old sample papers will be removed")
+    print("Wrote 10 sample authors and 12 comic papers; old sample papers will be hidden")
 
 
 if __name__ == "__main__":

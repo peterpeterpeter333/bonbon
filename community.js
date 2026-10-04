@@ -4,7 +4,7 @@
   const profileContent = document.getElementById("profile-content");
   const noticesDialog = document.getElementById("notices-dialog");
   const noticesContent = document.getElementById("notices-content");
-  let client, feed = "new", viewer = null, moderator = false, credits = 0;
+  let client, feed = "new", viewer = null, moderator = false;
   let profiles = new Map(), likeCounts = new Map(), commentCounts = new Map();
   let repostCounts = new Map(), myLikes = new Set(), myBookmarks = new Set();
   let myReposts = new Set(), following = new Set(), muted = new Set(), blocked = new Set();
@@ -97,7 +97,7 @@
     const requests = [
       client.from("profiles").select("user_id,handle,display_name,bio").limit(500),
       client.from("sample_authors").select("id,handle,display_name,bio").limit(100),
-      client.from("paper_likes").select("paper_id,user_id").limit(2000),
+      client.from("paper_likes").select("paper_id,user_id,paid").eq("paid", false).limit(2000),
       client.from("comments").select("paper_id").limit(2000),
       client.from("reposts").select("paper_id,user_id,quote,created_at,paper:papers(id,user_id,sample_author_id,author,category,title,blocks,tags,source_paper_id,source_kind,created_at)").order("created_at", { ascending: false }).limit(500),
       client.from("follows").select("follower_id,followed_id").limit(2000),
@@ -109,8 +109,7 @@
       client.from("user_blocks").select("blocked_id").eq("blocker_id", viewer.id),
       client.from("sample_mutes").select("sample_author_id").eq("muter_id", viewer.id),
       client.from("sample_blocks").select("sample_author_id").eq("blocker_id", viewer.id),
-      client.from("moderators").select("user_id").eq("user_id", viewer.id),
-      client.from("paid_like_credits").select("balance").eq("user_id", viewer.id).maybeSingle()
+      client.from("moderators").select("user_id").eq("user_id", viewer.id)
     );
     const results = await Promise.all(requests);
     if (results.some(result => result.error)) {
@@ -142,22 +141,18 @@
     blocked = new Set([...(results[9]?.data || []).map(item => item.blocked_id),
       ...(results[11]?.data || []).map(item => item.sample_author_id)]);
     moderator = !!results[12]?.data?.length;
-    credits = results[13]?.data?.balance || 0;
     window.bonbonRender?.();
   }
 
   async function likePaper(paper) {
     if (needsLogin()) return;
     if (paper.user_id === viewer.id) { showToast("自分の論文にはいいねできません"); return; }
-    if (myLikes.has(paper.id) && credits <= 0) {
-      showToast("2回目以降のいいねは有料です。決済機能の準備中です");
-      return;
-    }
-    const method = myLikes.has(paper.id) ? "give_paid_like" : "give_free_like";
+    const wasLiked = myLikes.has(paper.id);
+    const method = wasLiked ? "remove_free_like" : "give_free_like";
     const { error } = await client.rpc(method, { target_paper: paper.id });
     if (error) { showToast("いいねできませんでした。通信状態やブロック設定を確認してください"); return; }
     await refreshCommunity();
-    showToast(method === "give_free_like" ? "いいねしました" : "有料いいねを追加しました");
+    showToast(wasLiked ? "いいねを取り消しました" : "いいねしました");
   }
 
   async function bookmarkPaper(paper) {
@@ -209,7 +204,7 @@
     const comments = numberFor(commentCounts, paper.id);
     const reposts = numberFor(repostCounts, paper.id);
     actions.append(
-      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・追加は有料" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id) }),
+      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id) }),
       iconButton("comment", `コメント ${comments}件`, () => window.bonbonOpenPaper?.(paper), { count: comments }),
       iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id) }),
       iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id) }),
@@ -243,7 +238,7 @@
     const likes = numberFor(likeCounts, paper.id);
     const reposts = numberFor(repostCounts, paper.id);
     actions.append(
-      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・追加は有料" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id), showLabel: true }),
+      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id), showLabel: true }),
       iconButton("comment", `コメント ${numberFor(commentCounts, paper.id)}件`, () => content.querySelector(".comment-list")?.scrollIntoView({ behavior: "smooth" }), { count: numberFor(commentCounts, paper.id), showLabel: true }),
       iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id), showLabel: true }),
       iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id), showLabel: true }),

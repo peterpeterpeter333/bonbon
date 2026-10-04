@@ -2,6 +2,8 @@
 
 日常の小さな疑問を、自由な見出し・文章・画像で「論文もどき」にするサイトです。
 
+iPhoneアプリのXcodeプロジェクトは [`ios/Bonbon.xcodeproj`](ios/Bonbon.xcodeproj) にあります。ネイティブの閲覧・検索・保存・共有画面と、投稿・交流用のWeb画面を備えています。署名なしのiPhone向けビルドは確認済みです。実機・TestFlightでの確認はこれからです。
+
 ## 公開サイト
 
 https://peterpeterpeter333.github.io/bonbon/

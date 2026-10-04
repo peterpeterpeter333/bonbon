@@ -34,9 +34,11 @@
     function updateAccount(nextUser) {
       user = nextUser;
       accountName.textContent = user?.is_anonymous ? "ゲスト" : user?.email || "";
-      accountButton.textContent = user?.is_anonymous ? "ゲスト情報" : user ? "ログアウト" : "ゲストで始める";
+      accountButton.textContent = user?.is_anonymous ? "ゲスト情報" : user ? "アカウント" : "ゲストで始める";
       guestStart.hidden = !!user;
       guestSwitch.hidden = !user?.is_anonymous;
+      document.getElementById("signout-button").hidden = !user || user.is_anonymous;
+      document.getElementById("delete-account-section").hidden = !user;
       document.getElementById("guest-help").hidden = !user?.is_anonymous;
       document.getElementById("existing-login").hidden = !!user;
       document.getElementById("profile-button").hidden = !user;
@@ -72,11 +74,50 @@
       showToast("既存のメールアカウントでログインしてください");
     });
 
-    accountButton.addEventListener("click", async () => {
-      if (!user || user.is_anonymous) { accountDialog.showModal(); return; }
+    accountButton.addEventListener("click", () => accountDialog.showModal());
+
+    document.getElementById("signout-button").addEventListener("click", async () => {
       const { error } = await client.auth.signOut();
       if (error) showToast("ログアウトできませんでした。もう一度お試しください");
-      else showToast("ログアウトしました");
+      else { accountDialog.close(); showToast("ログアウトしました"); }
+    });
+
+    document.getElementById("delete-account-button").addEventListener("click", async () => {
+      if (!user) return;
+      const targetId = user.id;
+      if (prompt("公開投稿・画像・プロフィール・コメントなどが完全に消えます。続ける場合は「削除」と入力してください。") !== "削除") return;
+      const control = document.getElementById("delete-account-button");
+      control.disabled = true;
+      control.textContent = "削除しています…";
+      try {
+        // Storage objects must be deleted through the Storage API before auth.users.
+        for (let batch = 0; batch < 100; batch++) {
+          if (user?.id !== targetId) throw new Error("Account changed");
+          const { data: images, error: listError } = await client.storage.from("paper-images")
+            .list(targetId, { limit: 100 });
+          if (listError) throw listError;
+          const paths = (images || []).filter(item => /^[0-9a-f-]{36}\.jpg$/i.test(item.name))
+            .map(item => `${targetId}/${item.name}`);
+          if (!paths.length) break;
+          const { error: removeError } = await client.storage.from("paper-images").remove(paths);
+          if (removeError) throw removeError;
+          if (batch === 99) throw new Error("Too many images");
+        }
+        if (user?.id !== targetId) throw new Error("Account changed");
+        const { error } = await client.rpc("delete_own_bonbon_account");
+        if (error) throw error;
+        localStorage.removeItem("ronbun-modoki-drafts-v1");
+        await client.auth.signOut({ scope: "local" });
+        accountDialog.close();
+        updateAccount(null);
+        location.reload();
+      } catch (error) {
+        console.error("Account deletion failed", error);
+        showToast("削除を完了できませんでした。再試行するかお問い合わせください");
+      } finally {
+        control.disabled = false;
+        control.textContent = "アカウントを完全に削除";
+      }
     });
 
     accountForm.addEventListener("submit", async event => {
@@ -190,7 +231,7 @@
         showToast("論文を公開しました");
       } catch (error) {
         if (uploaded.length) await client.storage.from("paper-images").remove(uploaded);
-        showToast(`${stage}の保存に失敗しました。内容は残っています。もう一度お試しください`);
+        showToast(error.message?.includes("Content needs revision") ? "投稿内容を見直してください。脅迫などの表現は公開できません" : `${stage}の保存に失敗しました。内容は残っています。もう一度お試しください`);
         console.error("Publish failed", error);
       } finally {
         publishButton.disabled = false;

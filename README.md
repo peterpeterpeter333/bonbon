@@ -27,7 +27,8 @@ GitHub Pages は `main` のルートから公開しています。共有投稿�
 4. サンプル投稿を表示する場合は [`supabase/demo-support.sql`](supabase/demo-support.sql)、[`supabase/demo-seed.sql`](supabase/demo-seed.sql) の順に実行します。元原稿は [`supabase/comic-papers.json`](supabase/comic-papers.json) にあり、`python3 scripts/build_demo_seed.py` で SQL を再生成できます。再実行すると旧100件の公式サンプルを非表示にし、新しい12件を公開します。旧投稿はデータベースに残るため復元できます。一般ユーザーの投稿は変更しません。
    以前の有料いいね方式を使っていたプロジェクトでは、[`supabase/likes-as-reactions.sql`](supabase/likes-as-reactions.sql) も実行します。
    ゲストプロフィールの初期名を使う場合は [`supabase/guest-profiles.sql`](supabase/guest-profiles.sql) を実行し、Supabase Authentication → Sign In / Providers で Anonymous Sign-Ins を有効にします。
-   管理者の報告一覧を使う場合は [`supabase/moderation.sql`](supabase/moderation.sql) も実行します。管理者IDの登録は Supabase Dashboard で行い、メールアドレスを公開リポジトリに書き込まないでください。
+   管理者の報告一覧を使う場合は [`supabase/moderation.sql`](supabase/moderation.sql) も実行します。管理者IDの登録は Supabase Dashboard で行い、メールアドレスを SQL に書き込まないでください。
+   App Store 向けのコメント通報・簡易テキストフィルター・退会機能には [`supabase/app-store-safety.sql`](supabase/app-store-safety.sql) を実行します。bonbon の既存プロジェクトには適用済みです。
 5. Authentication → URL Configuration で Site URL と Redirect URL に `https://peterpeterpeter333.github.io/bonbon/` を設定します。
 6. `config.js` にプロジェクト URL と **publishable key** を入れて `main` に反映します。これはブラウザ向けのキーです。`service_role` や secret key は入れないでください。
 7. 公開サイトでメールリンクのログイン、2台の端末からの投稿閲覧、画像投稿、投稿削除、通報を確認します。
@@ -39,7 +40,9 @@ Supabase プロジェクト `bonbon` に既存の SQL とゲストプロフィ�
 - データベースには RLS を設定し、誰でも閲覧、ログインした本人だけが投稿・削除できるようにしています。
 - 画像バケットは公開用です。投稿に使った画像は URL を知る人が見られます。
 - 24時間あたり10投稿の簡易制限があります。大規模運用には追加の迷惑投稿対策が必要です。
-- 通報は `paper_reports` テーブルに蓄積されます。管理者はサイトの「報告」から未対応の投稿を確認できます。管理者権限は `moderators` テーブルと RLS で制御します。
+- 投稿とコメントの通報は `paper_reports` と `comment_reports` に蓄積されます。管理者はサイトの「報告」から確認できます。管理者権限は `moderators` テーブルと RLS で制御します。
+- サーバー側で明確な脅迫などを対象にした簡易テキストフィルターを適用します。表記ゆれ・画像などには効かないため、通報確認と人手の対応を続けてください。
+- ユーザーはアカウント画面から退会できます。画像を Storage API で消去してから Auth ユーザーを削除し、公開投稿などは外部キーの cascade で削除されます。途中で失敗した場合は再試行または問い合わせが必要です。
 - 管理者として使う場合は、既存のメールアカウントでログインします。ゲスト利用中は「ゲスト情報」から切り替えられますが、そのゲストの投稿管理権を失うため、別ブラウザでのログインも選べます。
 - 管理者の投稿削除時には画像も Storage から削除します。画像削除が失敗した場合は、Dashboard で残った画像を確認してください。
 - 応援機能は未実装です。将来有料で提供する場合は、いいねとは別の記録と決済確認を用意します。

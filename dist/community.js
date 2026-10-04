@@ -162,8 +162,10 @@
     moderationContent.replaceChildren();
     if (error) { moderationContent.append(el("p", "hint", "報告を読み込めませんでした")); return; }
     const reports = (data || []).sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1));
-    if (!reports.length) { moderationContent.append(el("p", "hint", "報告はまだありません。")); return; }
-    moderationContent.append(el("p", "hint", `未対応 ${reports.filter(item => item.status === "open").length}件 · 最近の報告 ${reports.length}件`));
+    moderationContent.append(el("h3", "", "投稿の報告"));
+    moderationContent.append(el("p", "hint", reports.length
+      ? `未対応 ${reports.filter(item => item.status === "open").length}件 · 最近の報告 ${reports.length}件`
+      : "報告はまだありません。"));
     for (const report of reports) {
       const box = el("article", "report-card");
       const state = { open: "未対応", resolved: "対応済み", dismissed: "却下" }[report.status] || report.status;
@@ -181,6 +183,47 @@
         for (const [label, status] of [["対応済みにする", "resolved"], ["報告を却下", "dismissed"]]) {
           actions.append(button(label, async () => {
             const { data: updated, error: updateError } = await client.from("paper_reports")
+              .update({ status, handled_at: new Date().toISOString(), handled_by: viewer.id })
+              .eq("id", report.id).eq("status", "open").select("id").maybeSingle();
+            if (updateError || !updated) { showToast("報告を更新できませんでした"); return; }
+            await loadReports();
+            showToast(status === "resolved" ? "対応済みにしました" : "報告を却下しました");
+          }));
+        }
+      }
+      box.append(actions);
+      moderationContent.append(box);
+    }
+    const { data: commentReports, error: commentError } = await client.from("comment_reports")
+      .select("id,comment_id,reason,created_at,status,comment:comments(id,user_id,body,paper_id)")
+      .order("created_at", { ascending: false }).limit(100);
+    if (!moderator || requestedViewerId !== viewer?.id) return;
+    moderationContent.append(el("h3", "", "コメントの報告"));
+    if (commentError) { moderationContent.append(el("p", "hint", "コメントの報告を読み込めませんでした")); return; }
+    const items = (commentReports || []).sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1));
+    moderationContent.append(el("p", "hint", items.length
+      ? `未対応 ${items.filter(item => item.status === "open").length}件 · 最近の報告 ${items.length}件`
+      : "報告はまだありません。"));
+    for (const report of items) {
+      const box = el("article", "report-card");
+      const state = { open: "未対応", resolved: "対応済み", dismissed: "却下" }[report.status] || report.status;
+      box.append(el("div", "report-meta", `${state} · ${new Date(report.created_at).toLocaleString("ja-JP")}`));
+      box.append(el("p", "", report.comment?.body || "削除されたコメント"));
+      box.append(el("p", "hint", `通報理由：${report.reason}`));
+      const actions = el("div", "read-actions");
+      if (report.comment) actions.append(button("投稿を見る", () => {
+        moderationDialog.close(); window.bonbonOpenPaperById?.(report.comment.paper_id);
+      }));
+      if (report.status === "open") {
+        if (report.comment) actions.append(button("コメントを削除", async () => {
+          if (!confirm("このコメントを削除しますか？")) return;
+          const { error: removeError } = await client.from("comments").delete().eq("id", report.comment_id);
+          if (removeError) showToast("コメントを削除できませんでした");
+          else { await loadReports(); await refreshCommunity(); }
+        }, "dangerbutton"));
+        for (const [label, status] of [["対応済みにする", "resolved"], ["報告を却下", "dismissed"]]) {
+          actions.append(button(label, async () => {
+            const { data: updated, error: updateError } = await client.from("comment_reports")
               .update({ status, handled_at: new Date().toISOString(), handled_by: viewer.id })
               .eq("id", report.id).eq("status", "open").select("id").maybeSingle();
             if (updateError || !updated) { showToast("報告を更新できませんでした"); return; }
@@ -278,12 +321,24 @@
     for (const item of data) {
       const box = el("div", "comment");
       box.append(el("b", "", authorName(item.user_id)), el("p", "", item.body));
-      if (ownOrModerated(item.user_id)) box.append(button("削除", async () => {
+      const actions = el("div", "read-actions");
+      if (item.user_id !== viewer?.id) actions.append(button("通報", async () => {
+        if (needsLogin()) return;
+        const reason = prompt("通報理由を入力してください（500字以内）");
+        if (reason === null) return;
+        const text = reason.trim();
+        if (!text || text.length > 500) { showToast("通報理由を1〜500字で入力してください"); return; }
+        const { error: reportError } = await client.from("comment_reports")
+          .insert({ comment_id: item.id, reporter_id: viewer.id, reason: text });
+        showToast(reportError ? "通報を送れませんでした。送信済みの場合があります" : "通報を受け付けました");
+      }));
+      if (ownOrModerated(item.user_id)) actions.append(button("削除", async () => {
         if (!confirm("このコメントを削除しますか？")) return;
         const { error: removeError } = await client.from("comments").delete().eq("id", item.id);
         if (removeError) showToast("コメントを削除できませんでした");
         else { await loadComments(paper, container); await refreshCommunity(); }
       }, "social-action dangerbutton"));
+      box.append(actions);
       container.append(box);
     }
   }
@@ -320,7 +375,9 @@
       send.disabled = true;
       const { error } = await client.from("comments").insert({ paper_id: paper.id, user_id: viewer.id, body });
       send.disabled = false;
-      if (error) showToast("コメントを送れませんでした");
+      if (error) showToast(error.message?.includes("Content needs revision")
+        ? "コメント内容を見直してください。脅迫などの表現は公開できません"
+        : "コメントを送れませんでした");
       else { area.value = ""; await loadComments(paper, comments); await refreshCommunity(); showToast("コメントしました") }
     });
     content.append(form);

@@ -117,18 +117,6 @@ grant select on public.paper_likes to anon, authenticated;
 drop policy if exists "Read likes" on public.paper_likes;
 create policy "Read likes" on public.paper_likes for select to anon, authenticated using (true);
 
-create table if not exists public.paid_like_credits (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  balance integer not null default 0 check (balance >= 0),
-  updated_at timestamptz not null default now()
-);
-alter table public.paid_like_credits enable row level security;
-revoke all on public.paid_like_credits from anon, authenticated;
-grant select on public.paid_like_credits to authenticated;
-drop policy if exists "Read own credits" on public.paid_like_credits;
-create policy "Read own credits" on public.paid_like_credits for select to authenticated
-  using (user_id = (select auth.uid()));
-
 create or replace function public.give_free_like(target_paper uuid)
 returns void language plpgsql security definer set search_path = '' as $$
 declare owner_id uuid;
@@ -136,29 +124,23 @@ begin
   if auth.uid() is null then raise exception 'Login required'; end if;
   select user_id into owner_id from public.papers where id = target_paper;
   if owner_id is null or not public.can_interact_with(owner_id) then raise exception 'Like unavailable'; end if;
-  if exists(select 1 from public.paper_likes where paper_id=target_paper and user_id=auth.uid())
-    then raise exception 'A paid credit is required for another like'; end if;
+  if exists(select 1 from public.paper_likes where paper_id=target_paper and user_id=auth.uid() and paid=false)
+    then raise exception 'Already liked'; end if;
   insert into public.paper_likes(paper_id,user_id,paid) values(target_paper,auth.uid(),false);
 end;
 $$;
 revoke all on function public.give_free_like(uuid) from public, anon;
 grant execute on function public.give_free_like(uuid) to authenticated;
 
-create or replace function public.give_paid_like(target_paper uuid)
+create or replace function public.remove_free_like(target_paper uuid)
 returns void language plpgsql security definer set search_path = '' as $$
-declare owner_id uuid;
 begin
   if auth.uid() is null then raise exception 'Login required'; end if;
-  select user_id into owner_id from public.papers where id = target_paper;
-  if owner_id is null or not public.can_interact_with(owner_id) then raise exception 'Like unavailable'; end if;
-  update public.paid_like_credits set balance=balance-1,updated_at=now()
-    where user_id=auth.uid() and balance>0;
-  if not found then raise exception 'Paid like credit required'; end if;
-  insert into public.paper_likes(paper_id,user_id,paid) values(target_paper,auth.uid(),true);
+  delete from public.paper_likes where paper_id=target_paper and user_id=auth.uid() and paid=false;
 end;
 $$;
-revoke all on function public.give_paid_like(uuid) from public, anon;
-grant execute on function public.give_paid_like(uuid) to authenticated;
+revoke all on function public.remove_free_like(uuid) from public, anon;
+grant execute on function public.remove_free_like(uuid) to authenticated;
 
 create table if not exists public.comments (
   id bigint generated always as identity primary key,

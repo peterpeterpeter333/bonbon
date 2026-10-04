@@ -16,6 +16,26 @@
     b.addEventListener("click", action);
     return b;
   };
+  const iconPaths = {
+    like: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8Z"/>',
+    comment: '<path d="M20.5 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.4 0-2.8-.3-4-1l-4.5 1 1.1-4.1a8.5 8.5 0 1 1 15.9-4.4Z"/>',
+    repost: '<path d="M4 7h13l-3-3m3 3-3 3M20 17H7l3-3m-3 3 3 3"/>',
+    bookmark: '<path d="M6 3.5h12v17l-6-4-6 4v-17Z"/>',
+    share: '<path d="M12 16V3m0 0L8 7m4-4 4 4M5 12v8h14v-8"/>'
+  };
+  const iconButton = (kind, label, action, { count, active = false, showLabel = false } = {}) => {
+    const b = button("", action, `social-action icon-action icon-${kind}${active ? " is-active" : ""}`);
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = iconPaths[kind];
+    b.append(icon);
+    if (count !== undefined) b.append(el("span", "action-count", String(count)));
+    if (showLabel) b.append(el("span", "action-label", label.split(" ")[0]));
+    return b;
+  };
   const numberFor = (map, id) => map.get(id) || 0;
   const authorName = id => profiles.get(id)?.display_name || "研究者";
   const paperUrl = id => `${location.origin}${location.pathname}#paper=${id}`;
@@ -185,12 +205,15 @@
 
   function communityCardActions(paper, foot) {
     const actions = el("div", "social-actions");
+    const likes = numberFor(likeCounts, paper.id);
+    const comments = numberFor(commentCounts, paper.id);
+    const reposts = numberFor(repostCounts, paper.id);
     actions.append(
-      button(`♡ ${numberFor(likeCounts, paper.id)}`, () => likePaper(paper)),
-      button(`コメント ${numberFor(commentCounts, paper.id)}`, () => window.bonbonOpenPaper?.(paper)),
-      button(`リポスト ${numberFor(repostCounts, paper.id)}`, () => repostPaper(paper)),
-      button(myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper)),
-      button("共有", () => sharePaper(paper))
+      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・追加は有料" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id) }),
+      iconButton("comment", `コメント ${comments}件`, () => window.bonbonOpenPaper?.(paper), { count: comments }),
+      iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id) }),
+      iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id) }),
+      iconButton("share", "共有", () => sharePaper(paper))
     );
     foot.append(actions);
   }
@@ -217,10 +240,13 @@
 
   window.bonbonReadActions = (paper, content) => {
     const actions = el("div", "read-actions");
+    const likes = numberFor(likeCounts, paper.id);
+    const reposts = numberFor(repostCounts, paper.id);
     actions.append(
-      button(`♡ ${numberFor(likeCounts, paper.id)}${myLikes.has(paper.id) ? "・追加は有料" : ""}`, () => likePaper(paper)),
-      button(myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper)),
-      button(myReposts.has(paper.id) ? "リポスト済み" : "リポスト", () => repostPaper(paper)),
+      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・追加は有料" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id), showLabel: true }),
+      iconButton("comment", `コメント ${numberFor(commentCounts, paper.id)}件`, () => content.querySelector(".comment-list")?.scrollIntoView({ behavior: "smooth" }), { count: numberFor(commentCounts, paper.id), showLabel: true }),
+      iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id), showLabel: true }),
+      iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id), showLabel: true }),
       button("引用して共有", () => repostPaper(paper, true)),
       button("追試を書く", () => { document.getElementById("read-dialog").close(); window.bonbonStartLinkedPaper?.(paper, "replication") }),
       button("引用して論文を書く", () => { document.getElementById("read-dialog").close(); window.bonbonStartLinkedPaper?.(paper, "citation") }),

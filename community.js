@@ -153,10 +153,12 @@
 
   async function loadReports() {
     if (!moderator || !viewer) return;
+    const requestedViewerId = viewer.id;
     moderationContent.replaceChildren(el("p", "hint", "報告を読み込んでいます…"));
     const { data, error } = await client.from("paper_reports")
       .select("id,paper_id,reason,created_at,status,handled_at,paper:papers(id,user_id,title,author,blocks)")
       .order("created_at", { ascending: false }).limit(100);
+    if (!moderator || requestedViewerId !== viewer?.id) return;
     moderationContent.replaceChildren();
     if (error) { moderationContent.append(el("p", "hint", "報告を読み込めませんでした")); return; }
     const reports = (data || []).sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1));
@@ -452,6 +454,8 @@
     viewer = event.detail.user;
     moderator = false;
     moderationButton.hidden = true;
+    if (moderationDialog.open) moderationDialog.close();
+    moderationContent.replaceChildren();
     refreshCommunity();
   });
   if (window.bonbonClient) start({ detail: { client: window.bonbonClient } });

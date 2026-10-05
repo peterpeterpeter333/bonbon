@@ -12,6 +12,7 @@
   let repostCounts = new Map(), myLikes = new Set(), myBookmarks = new Set();
   let myReposts = new Set(), following = new Set(), muted = new Set(), blocked = new Set();
   let reposts = [];
+  const pendingLikes = new Set();
 
   const button = (label, action, className = "social-action") => {
     const b = el("button", className, label);
@@ -245,12 +246,38 @@
   async function likePaper(paper) {
     if (needsLogin()) return;
     if (paper.user_id === viewer.id) { showToast("自分の論文にはいいねできません"); return; }
+    if (pendingLikes.has(paper.id)) return;
+    pendingLikes.add(paper.id);
     const wasLiked = myLikes.has(paper.id);
     const method = wasLiked ? "remove_free_like" : "give_free_like";
+    if (wasLiked) myLikes.delete(paper.id); else myLikes.add(paper.id);
+    likeCounts.set(paper.id, Math.max(0, numberFor(likeCounts, paper.id) + (wasLiked ? -1 : 1)));
+    updateLikeButtons(paper.id);
     const { error } = await client.rpc(method, { target_paper: paper.id });
-    if (error) { showToast("いいねできませんでした。通信状態やブロック設定を確認してください"); return; }
+    if (error) {
+      if (wasLiked) myLikes.add(paper.id); else myLikes.delete(paper.id);
+      likeCounts.set(paper.id, Math.max(0, numberFor(likeCounts, paper.id) + (wasLiked ? 1 : -1)));
+      updateLikeButtons(paper.id);
+      pendingLikes.delete(paper.id);
+      showToast("いいねできませんでした。通信状態やブロック設定を確認してください");
+      return;
+    }
     await refreshCommunity();
+    updateLikeButtons(paper.id);
+    pendingLikes.delete(paper.id);
     showToast(wasLiked ? "いいねを取り消しました" : "いいねしました");
+  }
+
+  function updateLikeButtons(paperId) {
+    const count = numberFor(likeCounts, paperId);
+    const active = myLikes.has(paperId);
+    document.querySelectorAll("[data-like-paper-id]").forEach(item => {
+      if (item.dataset.likePaperId !== String(paperId)) return;
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-label", `いいね ${count}件${active ? "・もう一度押すと取り消し" : ""}`);
+      item.title = item.getAttribute("aria-label");
+      item.querySelector(".action-count").textContent = String(count);
+    });
   }
 
   async function bookmarkPaper(paper) {
@@ -301,8 +328,10 @@
     const likes = numberFor(likeCounts, paper.id);
     const comments = numberFor(commentCounts, paper.id);
     const reposts = numberFor(repostCounts, paper.id);
+    const like = iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id) });
+    like.dataset.likePaperId = paper.id;
     actions.append(
-      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id) }),
+      like,
       iconButton("comment", `コメント ${comments}件`, () => window.bonbonOpenPaper?.(paper), { count: comments }),
       iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id) }),
       iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id) }),
@@ -347,8 +376,10 @@
     const actions = el("div", "read-actions");
     const likes = numberFor(likeCounts, paper.id);
     const reposts = numberFor(repostCounts, paper.id);
+    const like = iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id), showLabel: true });
+    like.dataset.likePaperId = paper.id;
     actions.append(
-      iconButton("like", `いいね ${likes}件${myLikes.has(paper.id) ? "・もう一度押すと取り消し" : ""}`, () => likePaper(paper), { count: likes, active: myLikes.has(paper.id), showLabel: true }),
+      like,
       iconButton("comment", `コメント ${numberFor(commentCounts, paper.id)}件`, () => content.querySelector(".comment-list")?.scrollIntoView({ behavior: "smooth" }), { count: numberFor(commentCounts, paper.id), showLabel: true }),
       iconButton("bookmark", myBookmarks.has(paper.id) ? "保存済み" : "保存", () => bookmarkPaper(paper), { active: myBookmarks.has(paper.id), showLabel: true }),
       iconButton("repost", `リポスト ${reposts}件`, () => repostPaper(paper), { count: reposts, active: myReposts.has(paper.id), showLabel: true }),
@@ -446,6 +477,13 @@
     if (!profileDialog.open) profileDialog.showModal();
   }
   window.bonbonOpenProfile = showProfile;
+  function openProfileRoute() {
+    const active = location.hash === "#profile";
+    document.body.classList.toggle("profile-route", active);
+    if (!active) return;
+    if (viewer) showProfile(viewer.id);
+    else if (!document.getElementById("account-dialog").open) document.getElementById("account-dialog").showModal();
+  }
   document.getElementById("profile-button").addEventListener("click", () => {
     if (needsLogin()) return; showProfile(viewer.id);
   });
@@ -493,6 +531,8 @@
   window.addEventListener("hashchange", () => {
     const match = location.hash.match(/^#paper=([0-9a-f-]{36})$/i);
     if (match && client) openPaperById(match[1]);
+    if (location.hash === "#profile") refreshCommunity().then(openProfileRoute);
+    else document.body.classList.remove("profile-route");
   });
 
   function start(event) {
@@ -503,7 +543,7 @@
       communityCardActions(paper, foot);
     };
     viewer = window.bonbonCurrentUser?.() || null;
-    refreshCommunity();
+    refreshCommunity().then(openProfileRoute);
     const match = location.hash.match(/^#paper=([0-9a-f-]{36})$/i);
     if (match) openPaperById(match[1]);
   }
@@ -513,7 +553,7 @@
     moderationButton.hidden = true;
     if (moderationDialog.open) moderationDialog.close();
     moderationContent.replaceChildren();
-    refreshCommunity();
+    refreshCommunity().then(openProfileRoute);
   });
   if (window.bonbonClient) start({ detail: { client: window.bonbonClient } });
   else window.addEventListener("bonbon:ready", start, { once: true });

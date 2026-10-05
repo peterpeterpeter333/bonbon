@@ -2,30 +2,62 @@ import SwiftUI
 import WebKit
 
 struct RootView: View {
-    @StateObject private var browser = BonbonBrowser()
+    @StateObject private var homeBrowser = BonbonBrowser(url: BonbonConfig.site)
+    @StateObject private var profileBrowser = BonbonBrowser(url: BonbonConfig.profile)
     @State private var showingInfo = false
+    @State private var selection = 0
 
     var body: some View {
-        NavigationStack {
-            BonbonWebView(webView: browser.webView)
-                .navigationTitle("論文もどき")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button("再読み込み", systemImage: "arrow.clockwise") {
-                            browser.webView.reload()
-                        }
-                        ShareLink(item: BonbonConfig.site) {
-                            Label("共有", systemImage: "square.and.arrow.up")
-                        }
-                        Button("アプリ情報", systemImage: "ellipsis.circle") {
-                            showingInfo = true
+        TabView(selection: $selection) {
+            NavigationStack {
+                BonbonWebView(webView: homeBrowser.webView)
+                    .navigationTitle("投稿・交流")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarTrailing) {
+                            Button("再読み込み", systemImage: "arrow.clockwise") {
+                                homeBrowser.webView.reload()
+                            }
+                            ShareLink(item: BonbonConfig.site) {
+                                Label("共有", systemImage: "square.and.arrow.up")
+                            }
+                            Button("アプリ情報", systemImage: "ellipsis.circle") {
+                                showingInfo = true
+                            }
                         }
                     }
-                }
-                .sheet(isPresented: $showingInfo) { AppInfoView() }
+            }
+            .tabItem { Label("投稿・交流", systemImage: "house.fill") }
+            .tag(0)
+
+            NavigationStack {
+                BonbonWebView(webView: profileBrowser.webView)
+                    .navigationTitle("マイページ")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarTrailing) {
+                            Button("アカウント管理", systemImage: "person.crop.circle.badge.gearshape") {
+                                profileBrowser.webView.evaluateJavaScript("document.getElementById('account-button')?.click()")
+                            }
+                            Button("アプリ情報", systemImage: "ellipsis.circle") {
+                                showingInfo = true
+                            }
+                        }
+                    }
+            }
+            .tabItem { Label("マイページ", systemImage: "person.crop.circle.fill") }
+            .tag(1)
         }
-        .tint(Color(red: 19 / 255, green: 36 / 255, blue: 61 / 255))
+        .onChange(of: selection) { _, value in
+            if value == 1 {
+                profileBrowser.webView.reload()
+            }
+        }
+        .sheet(isPresented: $showingInfo) { AppInfoView() }
+        .tint(Color(red: 217 / 255, green: 251 / 255, blue: 104 / 255))
+        .toolbarBackground(Color(red: 19 / 255, green: 36 / 255, blue: 61 / 255), for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
     }
 }
 
@@ -33,9 +65,9 @@ struct RootView: View {
 private final class BonbonBrowser: ObservableObject {
     let webView = WKWebView()
 
-    init() {
+    init(url: URL) {
         webView.allowsBackForwardNavigationGestures = true
-        webView.load(URLRequest(url: BonbonConfig.site))
+        webView.load(URLRequest(url: url))
     }
 }
 

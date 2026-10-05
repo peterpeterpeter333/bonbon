@@ -25,6 +25,7 @@
     .paperfoot .moderation-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;width:100%;margin-top:2px}.moderation-actions .social-action{min-width:40px;white-space:nowrap}.read-actions.moderation-actions{justify-content:flex-end;border-top:1px solid #e7edf3;padding-top:10px}
     .account-danger{border-top:1px solid #e0e8ef;margin-top:20px;padding-top:15px}.account-danger h3{font-size:.95rem;margin:0 0 4px}.account-danger .smallbutton{margin-top:10px}.footer a:hover,.hint a:hover{text-decoration:underline}
     @media(max-width:600px){.topin{flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.topbutton{margin-left:auto}.accountbar{order:3;width:100%;justify-content:flex-end;margin-left:0}.accountbar button{font-size:.72rem;padding:6px 8px}}
+    .related-papers{border-top:1px solid #e5ecf2;margin-top:28px;padding-top:20px}.related-papers h3{margin:0 0 5px;font-size:1.15rem}.related-papers>p{margin:0 0 14px;color:#697d94;font-size:.82rem}.related-list{display:grid;gap:9px}.related-card{display:block;width:100%;border:1px solid #dce6ee;background:#f8fbfd;border-radius:12px;padding:13px 15px;text-align:left;color:#172641}.related-card:hover,.related-card:focus-visible{border-color:#8ab2d1;background:#edf6fc}.related-card span{display:block;font-size:.74rem;color:#597696;margin-bottom:4px}.related-card b{line-height:1.5}
   </style>
 </head>
 <body>
@@ -120,6 +121,33 @@
         if(p.remote&&window.bonbonCardActions)window.bonbonCardActions(p,foot);grid.append(card);
       }
     }
+    function relatedPapersFor(p){
+      const terms=new Set(p.tags||[]),chars=Array.from(String(p.title||""));
+      const grams=new Set(chars.slice(0,-1).map((c,i)=>c+chars[i+1]));
+      const seen=new Set([p.id]);
+      return allPapers().filter(item=>{
+        if(seen.has(item.id)||item.repostActor)return false;
+        seen.add(item.id);return true;
+      }).map(item=>{
+        const overlap=(item.tags||[]).filter(tag=>terms.has(tag)).length;
+        const titleChars=Array.from(String(item.title||""));
+        const sharedTitle=titleChars.slice(0,-1).filter((c,i)=>grams.has(c+titleChars[i+1])).length;
+        const age=Date.parse(item.created_at)||0;
+        return {item,score:overlap*6+(item.category===p.category?4:0)+Math.min(sharedTitle,4)+age/1e13};
+      }).sort((a,b)=>b.score-a.score).slice(0,3).map(result=>result.item);
+    }
+    function appendRelatedPapers(p){
+      const related=relatedPapersFor(p);
+      if(!related.length)return;
+      const section=el("section","related-papers"),list=el("div","related-list");
+      section.append(el("h3","","続けて読む"),el("p","","タグ・カテゴリー・タイトルの近さから選びました。"));
+      for(const item of related){
+        const card=el("button","related-card");card.type="button";
+        card.append(el("span","",`${item.category||"暮らし"} · ${(item.tags||[]).slice(0,2).map(t=>`#${t}`).join(" ")}`),el("b","",item.title));
+        card.addEventListener("click",()=>openPaper(item));list.append(card);
+      }
+      section.append(list);readContent.append(section);
+    }
     function openPaper(p){
       readContent.replaceChildren();
       readContent.append(el("p","readmeta",`${p.category||"暮らし"} · ${p.local?"自分の下書き":p.sample?"公式サンプル":p.remote?"公開投稿":"サンプル作品"}`),el("h2","readtitle",p.title));
@@ -143,7 +171,9 @@
       readContent.append(el("p","readbottom",`著者：${p.author||"匿名研究者"}`));
       if(p.remote&&window.bonbonReadActions)window.bonbonReadActions(p,readContent);
       if(p.remote&&window.bonbonReadModerationActions)window.bonbonReadModerationActions(p,readContent);
-      readDialog.showModal();
+      appendRelatedPapers(p);
+      if(!readDialog.open)readDialog.showModal();
+      readDialog.querySelector(".dialogin").scrollTop=0;
     }
     function showToast(message){toast.textContent=message;toast.classList.add("show");clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.classList.remove("show"),3200)}
     function insertBlock(block,after){if(after)after.after(block);else editorBlocks.append(block);block.scrollIntoView({block:"nearest"})}

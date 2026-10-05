@@ -13,6 +13,7 @@
   let myReposts = new Set(), following = new Set(), muted = new Set(), blocked = new Set();
   let reposts = [];
   const pendingLikes = new Set();
+  let profileRequestId = 0;
 
   const button = (label, action, className = "social-action") => {
     const b = el("button", className, label);
@@ -415,12 +416,9 @@
   };
 
   async function showProfile(userId) {
+    const requestId = ++profileRequestId;
     const person = profiles.get(userId);
     if (!person) { showToast("プロフィールを読み込めませんでした"); return; }
-    profileContent.replaceChildren();
-    profileContent.append(el("h3", "", person.display_name),
-      el("p", "hint", `@${person.handle}${person.sample ? " · 公式サンプル" : ""}`),
-      el("p", "", person.bio || "自己紹介はまだありません。"));
     const [followersResult, papersResult] = await Promise.all([
       person.sample ? client.from("sample_follows").select("follower_id").eq("sample_author_id", userId)
         : client.from("follows").select("follower_id").eq("followed_id", userId),
@@ -428,6 +426,11 @@
         .eq(person.sample ? "sample_author_id" : "user_id", userId)
         .order("created_at", { ascending: false }).limit(20)
     ]);
+    if (requestId !== profileRequestId) return;
+    profileContent.replaceChildren();
+    profileContent.append(el("h3", "", person.display_name),
+      el("p", "hint", `@${person.handle}${person.sample ? " · 公式サンプル" : ""}`),
+      el("p", "", person.bio || "自己紹介はまだありません。"));
     const stats = el("div", "profile-stats");
     stats.append(el("span", "", `フォロワー ${followersResult.data?.length || 0}人`), el("span", "", `論文 ${papersResult.data?.length || 0}本`));
     profileContent.append(stats);
@@ -481,7 +484,9 @@
     const active = location.hash === "#profile";
     document.body.classList.toggle("profile-route", active);
     if (!active) return;
-    if (viewer) showProfile(viewer.id);
+    if (viewer) {
+      if (profiles.has(viewer.id)) showProfile(viewer.id);
+    }
     else if (!document.getElementById("account-dialog").open) document.getElementById("account-dialog").showModal();
   }
   document.getElementById("profile-button").addEventListener("click", () => {

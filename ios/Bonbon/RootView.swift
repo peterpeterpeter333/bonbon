@@ -36,7 +36,7 @@ struct RootView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {
-                            Button("アカウント管理", systemImage: "person.crop.circle.badge.gearshape") {
+                            Button("アカウント管理", systemImage: "gearshape") {
                                 profileBrowser.webView.evaluateJavaScript("document.getElementById('account-button')?.click()")
                             }
                             Button("アプリ情報", systemImage: "ellipsis.circle") {
@@ -54,10 +54,7 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingInfo) { AppInfoView() }
-        .tint(Color(red: 217 / 255, green: 251 / 255, blue: 104 / 255))
-        .toolbarBackground(Color(red: 19 / 255, green: 36 / 255, blue: 61 / 255), for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
+        .tint(Color(red: 19 / 255, green: 36 / 255, blue: 61 / 255))
     }
 }
 
@@ -74,8 +71,54 @@ private final class BonbonBrowser: ObservableObject {
 private struct BonbonWebView: UIViewRepresentable {
     let webView: WKWebView
 
-    func makeUIView(context: Context) -> WKWebView { webView }
+    func makeUIView(context: Context) -> WKWebView {
+        webView.uiDelegate = context.coordinator
+        return webView
+    }
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator: NSObject, WKUIDelegate {
+        private func present(_ alert: UIAlertController) -> Bool {
+            guard let window = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow),
+                let root = window.rootViewController else { return false }
+            var controller = root
+            while let next = controller.presentedViewController { controller = next }
+            controller.present(alert, animated: true)
+            return true
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            let alert = UIAlertController(title: "論文もどき", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler() })
+            if !present(alert) { completionHandler() }
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            let alert = UIAlertController(title: "確認", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in completionHandler(false) })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler(true) })
+            if !present(alert) { completionHandler(false) }
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+                     defaultText: String?, initiatedByFrame frame: WKFrameInfo,
+                     completionHandler: @escaping (String?) -> Void) {
+            let alert = UIAlertController(title: "入力", message: prompt, preferredStyle: .alert)
+            alert.addTextField { $0.text = defaultText }
+            alert.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in completionHandler(nil) })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                completionHandler(alert.textFields?.first?.text)
+            })
+            if !present(alert) { completionHandler(nil) }
+        }
+    }
 }
 
 private struct AppInfoView: View {

@@ -129,6 +129,7 @@ private struct AppInfoView: View {
                     Link("投稿ガイドライン", destination: BonbonConfig.site.appending(path: "community-guidelines.html"))
                     Link("利用規約", destination: BonbonConfig.site.appending(path: "terms.html"))
                     Link("プライバシーポリシー", destination: BonbonConfig.site.appending(path: "privacy.html"))
+                    Link("不具合を報告", destination: BonbonConfig.bugReport)
                     Link("お問い合わせ", destination: URL(string: "mailto:darth_vader_0923@outlook.jp")!)
                 }
                 Section {

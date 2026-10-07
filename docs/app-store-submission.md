@@ -8,6 +8,7 @@
 - 説明：日常の小さな疑問を、仮説や観察、結論を添えた「論文もどき」にして共有するコミュニティです。自由な見出しと画像を使って投稿できます。読む、検索する、保存する、コメントする、フォローするなどの交流を楽しめます。
 - キーワード案：論文,日常,投稿,コミュニティ,考察,仮説,エッセイ
 - サポート：`https://peterpeterpeter333.github.io/bonbon/` / `darth_vader_0923@outlook.jp`
+- 不具合報告：`https://docs.google.com/forms/d/e/1FAIpQLSe5JDuft_dmAGOKVEFsOmCz_7iFYLHhLeASWbKlszW1Fzp1sQ/viewform`
 - プライバシーポリシー：`https://peterpeterpeter333.github.io/bonbon/privacy.html`
 - 利用規約：`https://peterpeterpeter333.github.io/bonbon/terms.html`
 - 審査メモ案：ゲストとしてメール登録なしで投稿・コメント・通報できます。アプリのメイン画面から論文の閲覧・投稿・交流ができます。下の「マイページ」タブでプロフィールの閲覧・編集ができ、退会は同画面のアカウント管理から行えます。サンプルプロフィールはログインできない作例です。
